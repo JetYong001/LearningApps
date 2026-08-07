@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,16 +19,20 @@ import com.example.project.ui.screens.DashboardScreen
 import com.example.project.ui.screens.FlashcardsScreen
 import com.example.project.ui.screens.FocusSessionScreen
 import com.example.project.ui.screens.NotesScreen
+import com.example.project.ui.screens.NoteDetailScreen
+import com.example.project.ui.screens.NoteViewScreen
 import com.example.project.ui.screens.PlannerScreen
 import com.example.project.ui.screens.ProgressScreen
 import com.example.project.ui.screens.SettingsScreen
 import com.example.project.viewmodel.ThemeViewModel
+import com.example.project.viewmodel.NotesViewModel
 
 @Composable
 fun MainScreen(
     themeViewModel: ThemeViewModel = viewModel()
 ) {
     val navController = rememberNavController()
+    val notesViewModel: NotesViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
@@ -41,9 +44,8 @@ fun MainScreen(
                     selected = currentRoute == Screen.Dashboard.route,
                     onClick = {
                         navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { inclusive = false }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     },
                     icon = { Icon(Icons.Default.GridView, contentDescription = "Dashboard") }
@@ -53,9 +55,8 @@ fun MainScreen(
                     selected = currentRoute == Screen.Planner.route,
                     onClick = {
                         navController.navigate(Screen.Planner.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Planner.route) { inclusive = false }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     },
                     icon = { Icon(Icons.Default.Task, contentDescription = "Planner") }
@@ -64,10 +65,10 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = currentRoute == Screen.Notes.route,
                     onClick = {
+
                         navController.navigate(Screen.Notes.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Notes.route) { inclusive = false }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     },
                     icon = { Icon(Icons.Default.EditNote, contentDescription = "Notes") }
@@ -77,9 +78,8 @@ fun MainScreen(
                     selected = currentRoute == Screen.Progress.route,
                     onClick = {
                         navController.navigate(Screen.Progress.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Progress.route) { inclusive = false }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     },
                     icon = { Icon(Icons.Default.BarChart, contentDescription = "Progress") }
@@ -96,7 +96,37 @@ fun MainScreen(
                 DashboardScreen(navController = navController, viewModel = viewModel())
             }
             composable(Screen.Planner.route) { PlannerScreen() }
-            composable(Screen.Notes.route) { NotesScreen() }
+
+            composable(Screen.Notes.route) {
+                NotesScreen(navController = navController, viewModel = notesViewModel)
+            }
+
+            composable(Screen.NoteDetail.route) {
+                NoteDetailScreen(
+                    navController = navController,
+                    viewModel = notesViewModel,
+                    noteId = null
+                )
+            }
+
+            composable("${Screen.NoteDetail.route}/{noteId}") { backStackEntry ->
+                val noteId = backStackEntry.arguments?.getString("noteId")
+                NoteDetailScreen(
+                    navController = navController,
+                    viewModel = notesViewModel,
+                    noteId = noteId
+                )
+            }
+
+            composable(Screen.NoteView.route + "/{noteId}") { backStackEntry ->
+                val noteId = backStackEntry.arguments?.getString("noteId") ?: ""
+                NoteViewScreen(
+                    navController = navController,
+                    viewModel = notesViewModel,
+                    noteId = noteId
+                )
+            }
+
             composable(Screen.Progress.route) {
                 ProgressScreen(navController = navController)
             }

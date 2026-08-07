@@ -2,6 +2,7 @@ package com.example.project.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.project.model.TaskItem
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,13 +12,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlin.time.Duration.Companion.milliseconds
 
-data class TaskItem(
-    val id: Int,
-    val title: String,
-    val time: String,
-    val isCompleted: Boolean = false
-)
 
 enum class FocusState {
     IDLE, FOCUSING, BREAK
@@ -58,7 +54,7 @@ class DashboardViewModel : ViewModel() {
             while (true) {
                 val nowFormatted = LocalTime.now().format(formatter)
                 _uiState.update { it.copy(currentTimeText = nowFormatted) }
-                delay(1000L)
+                delay(1000L.milliseconds)
             }
         }
     }
@@ -81,7 +77,7 @@ class DashboardViewModel : ViewModel() {
             val focusBlockSeconds = breakAfterMinute * 60
             val breakSeconds = breakDurationMinute * 60
 
-            while (remainingFocus > 0) {
+            while (true) {
 
                 val currentFocusSeconds =
                     if (skipBreaks || breakAfterMinute <= 0)
@@ -111,9 +107,6 @@ class DashboardViewModel : ViewModel() {
                 if (remainingFocus <= 0)
                     break
 
-                if (skipBreaks)
-                    continue
-
                 _uiState.update {
                     it.copy(
                         focusState = FocusState.BREAK,
@@ -122,7 +115,7 @@ class DashboardViewModel : ViewModel() {
                 }
 
                 while (_uiState.value.remainingSeconds > 0) {
-                    delay(1000L)
+                    delay(1000L.milliseconds)
 
                     _uiState.update {
                         it.copy(
