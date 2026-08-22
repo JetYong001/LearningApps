@@ -21,7 +21,7 @@ fun ProgressSummaryCard(
 
     Column {
         Text(
-            text = "Daily Progress Summary",
+            text = "Overall Progress Summary",
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
@@ -55,7 +55,7 @@ fun ProgressSummaryCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Today's task completed: $completedTasks/$totalTasks",
+                        text = "Task completed: $completedTasks/$totalTasks",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
