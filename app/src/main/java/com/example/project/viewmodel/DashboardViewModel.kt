@@ -2,7 +2,10 @@ package com.example.project.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.project.data.supabase
 import com.example.project.model.TaskItem
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,23 +17,16 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.time.Duration.Companion.milliseconds
 
-
 enum class FocusState {
     IDLE, FOCUSING, BREAK
 }
 
 data class DashboardUiState(
-    val userName: String = "Yong",
+    val userName: String = "",
     val currentTimeText: String = "",
     val focusState: FocusState = FocusState.IDLE,
     val remainingSeconds: Int = 0,
-    val tasks: List<TaskItem> = listOf(
-        TaskItem(1, "Python", "2.30pm", isCompleted = true),
-        TaskItem(2, "MAD Practical 5", "4.00pm"),
-        TaskItem(3, "DSA Tutorial 4", "6.00pm"),
-        TaskItem(4, "SPC Tutorial 4", "8.00pm"),
-        TaskItem(5, "AI Practical 3", "10.00pm")
-    )
+    val tasks: List<TaskItem> = emptyList()
 ) {
     val completedCount: Int get() = tasks.count { it.isCompleted }
     val totalCount: Int get() = tasks.size
@@ -46,6 +42,8 @@ class DashboardViewModel : ViewModel() {
 
     init {
         startClock()
+        loadUserData()
+        fetchTasks()
     }
 
     private fun startClock() {
@@ -55,6 +53,38 @@ class DashboardViewModel : ViewModel() {
                 val nowFormatted = LocalTime.now().format(formatter)
                 _uiState.update { it.copy(currentTimeText = nowFormatted) }
                 delay(1000L.milliseconds)
+            }
+        }
+    }
+
+    fun loadUserData() {
+        val user = supabase.auth.currentUserOrNull()
+        val email = user?.email.orEmpty()
+        val displayName = email.substringBefore("@")
+            .ifBlank { "User" }
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+        _uiState.update {
+            it.copy(userName = displayName)
+        }
+    }
+
+    fun fetchTasks() {
+        val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return
+
+        viewModelScope.launch {
+            try {
+                val result = supabase.from("tasks")
+                    .select {
+                        filter {
+                            eq("user_id", currentUserId)
+                        }
+                    }
+                    .decodeList<TaskItem>()
+
+                _uiState.update { it.copy(tasks = result) }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

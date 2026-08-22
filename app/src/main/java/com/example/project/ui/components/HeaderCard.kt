@@ -1,7 +1,5 @@
 package com.example.project.ui.components
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,7 +27,12 @@ fun HeaderCard(
     onNotificationClick: () -> Unit = {}
 ) {
     val currentDateText = remember {
-        val formatter = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.ENGLISH)
+        val formatter =
+            DateTimeFormatter.ofPattern(
+                "EEEE, MMMM d",
+                Locale.ENGLISH
+            )
+
         LocalDate.now().format(formatter)
     }
 
@@ -50,14 +52,19 @@ fun HeaderCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .background(MaterialTheme.colorScheme.surface, shape = CircleShape),
+                        .background(
+                            MaterialTheme.colorScheme.surface,
+                            shape = CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -75,10 +82,13 @@ fun HeaderCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
+
                     Text(
                         text = subtitle,
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onPrimary.copy(
+                            alpha = 0.8f
+                        )
                     )
                 }
             }
@@ -88,26 +98,45 @@ fun HeaderCard(
                 verticalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxHeight()
             ) {
-                Text(
-                    text = "🔥",
-                    fontSize = 24.sp
+
+                Spacer(
+                    modifier = Modifier.height(28.dp)
                 )
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     Text(
                         text = currentDateText,
                         fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.onPrimary.copy(
+                            alpha = 0.8f
+                        ),
                         modifier = Modifier.padding(end = 4.dp)
                     )
-                    Box(modifier = Modifier.size(28.dp)) {
-                        IconButton(onClick = onNotificationClick, modifier = Modifier.size(28.dp)) {
-                            Icon(imageVector = Icons.Default.Notifications, contentDescription = "Deadline reminders", tint = MaterialTheme.colorScheme.onPrimary)
+
+                    Box(
+                        modifier = Modifier.size(28.dp)
+                    ) {
+
+                        IconButton(
+                            onClick = onNotificationClick,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Deadline reminders",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
+
                         if (hasNotifications) {
-                            Badge(modifier = Modifier.align(Alignment.TopEnd))
+                            Badge(
+                                modifier = Modifier.align(
+                                    Alignment.TopEnd
+                                )
+                            )
                         }
                     }
                 }

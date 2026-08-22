@@ -3,16 +3,19 @@ package com.example.project.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class Note(
-    @SerialName("id") val id: String = "",
-    @SerialName("title") val title: String = "",
-    @SerialName("content") val content: String = "",
-    @SerialName("subject_name") val subjectName: String = ""
-)
+import java.util.UUID
 
 @Serializable
-data class SubjectCategory(
-    @SerialName("name") val name: String = "",
-    @SerialName("color_hex") val colorHex: String = ""
+data class Note(
+    val id: String = UUID.randomUUID().toString(),
+
+    val title: String = "",
+
+    val content: String = "",
+
+    @SerialName("subject_name")
+    val subjectName: String = "",
+
+    @SerialName("user_id")
+    val userId: String = ""
 )

@@ -18,10 +18,6 @@ sealed class Screen(val route: String) {
     object NoteView : Screen("note_view_page") {
         fun createRoute(noteId: String) = "note_view_page/$noteId"
     }
-
-    object RemainingTask : Screen("remaining_task_page")
-    object DeadlineTask : Screen("deadline_task_page")
-    object CompletedTask : Screen("completed_task_page")
     object FocusSession : Screen("focus_session_page")
 
     object EditTask : Screen("edit_task_page")

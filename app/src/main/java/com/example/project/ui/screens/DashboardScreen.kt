@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.project.data.supabase
 import com.example.project.model.PlannerItem
 import com.example.project.navigation.Screen
 import com.example.project.ui.components.FocusSessionCard
@@ -27,6 +28,7 @@ import com.example.project.ui.components.HeaderCard
 import com.example.project.ui.components.ProgressSummaryCard
 import com.example.project.viewmodel.DashboardViewModel
 import com.example.project.viewmodel.PlannerViewModel
+import io.github.jan.supabase.auth.auth
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,7 +48,11 @@ fun DashboardScreen(
     var selectedDetail by remember { mutableStateOf<PlannerItem?>(null) }
     var showReminders by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { plannerViewModel.loadItems() }
+    val currentUserId = supabase.auth.currentUserOrNull()?.id
+
+    LaunchedEffect(currentUserId) {
+        plannerViewModel.loadItems()
+    }
 
     val completedItems = plannerItems.filter { it.status.equals("Completed", ignoreCase = true) }
     val remainingItems = plannerItems.filterNot { it.status.equals("Completed", ignoreCase = true) }
@@ -120,7 +126,7 @@ private fun DailyMetrics(
 }
 
 @Composable
-private fun MetricCard(label: String, count: Int, color: androidx.compose.ui.graphics.Color, contentColor: androidx.compose.ui.graphics.Color, onClick: () -> Unit, modifier: Modifier) {
+private fun MetricCard(label: String, count: Int, color: Color, contentColor: Color, onClick: () -> Unit, modifier: Modifier) {
     Card(modifier = modifier.height(150.dp).clickable(onClick = onClick), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = color)) {
         Column(Modifier.fillMaxSize().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
             Text(count.toString(), fontSize = 52.sp, fontWeight = FontWeight.Bold, color = contentColor)
@@ -236,7 +242,7 @@ private fun plannerReminders(items: List<PlannerItem>): List<PlannerReminder> {
         when {
             item.itemType == "task" && remaining in 0..(2 * hourMillis) -> PlannerReminder(item, "Due within 2 hours")
             item.itemType == "project" && remaining in 0..(3 * dayMillis) -> PlannerReminder(item, "Due within 3 days")
-            item.itemType == "project" && remaining in 0..(7 * dayMillis) -> PlannerReminder(item, "Due within 1 week")
+            item.itemType == "project" && remaining in 0..(7 * dayMillis) -> PlannerReminder(item, "Due within 7 days")
             else -> null
         }
     }.sortedBy { dueDateMillis(it.item.dueAt) }

@@ -17,8 +17,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.project.data.supabase
 import com.example.project.viewmodel.FlashcardsViewModel
 import com.example.project.viewmodel.NotesViewModel
+import io.github.jan.supabase.auth.auth
 
 @Composable
 fun FlashcardsScreen(
@@ -36,7 +38,9 @@ fun FlashcardsScreen(
     var currentIndex by remember { mutableStateOf(0) }
     var isAnswerVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    val currentUserId = supabase.auth.currentUserOrNull()?.id
+
+    LaunchedEffect(currentUserId) {
         notesViewModel.loadData()
     }
 

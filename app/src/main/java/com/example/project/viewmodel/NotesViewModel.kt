@@ -3,11 +3,12 @@ package com.example.project.viewmodel
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.ui.graphics.Color
+import androidx.core.graphics.toColorInt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.project.data.supabase
 import com.example.project.model.Note
-import com.example.project.model.SubjectCategory
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,204 +16,658 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.UUID
-import androidx.core.graphics.toColorInt
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+
+/*
+ * =========================================
+ * SUBJECT DATABASE MODEL
+ * =========================================
+ */
+
+@Serializable
+private data class SubjectCategoryRow(
+
+    @SerialName("name")
+    val name: String = "",
+
+    @SerialName("color_hex")
+    val colorHex: String = "#7BD5F5",
+
+    @SerialName("user_id")
+    val userId: String = ""
+)
+
+
+/*
+ * =========================================
+ * SUBJECT UI MODEL
+ * =========================================
+ */
 
 data class SubjectUiModel(
-    val name: String,
-    val cardColor: Color,
-    val notes: List<Note>
-)
+
+    val name: String = "",
+
+    val colorHex: String = "#7BD5F5",
+
+    val notes: List<Note> = emptyList()
+
+) {
+
+    val cardColor: Color
+        get() {
+
+            return try {
+
+                Color(
+                    colorHex.toColorInt()
+                )
+
+            } catch (e: Exception) {
+
+                Color(0xFF7BD5F5)
+            }
+        }
+}
+
+
+/*
+ * =========================================
+ * VIEW MODEL
+ * =========================================
+ */
 
 class NotesViewModel : ViewModel() {
 
-    private val _subjects = MutableStateFlow<List<SubjectUiModel>>(emptyList())
-    val subjects: StateFlow<List<SubjectUiModel>> = _subjects.asStateFlow()
 
-    private val _isLoaded = MutableStateFlow(false)
-    val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
+    /*
+     * =====================================
+     * NOTES
+     * =====================================
+     */
 
-    private val availableHexColors = listOf(
-        "#4FC3F7", "#BA68C8", "#FF8A65", "#AED581", "#FFD54F"
-    )
+    private val _notes =
+        MutableStateFlow<List<Note>>(emptyList())
 
-    init {
-        loadData()
-    }
+    val notes: StateFlow<List<Note>> =
+        _notes.asStateFlow()
 
-    fun loadData(context: Context? = null) {
-        _isLoaded.value = false
+
+    /*
+     * =====================================
+     * SUBJECTS
+     * =====================================
+     */
+
+    private val _subjects =
+        MutableStateFlow<List<SubjectUiModel>>(emptyList())
+
+    val subjects: StateFlow<List<SubjectUiModel>> =
+        _subjects.asStateFlow()
+
+
+    /*
+     * =====================================
+     * LOADING
+     * =====================================
+     */
+
+    private val _isLoaded =
+        MutableStateFlow(false)
+
+    val isLoaded: StateFlow<Boolean> =
+        _isLoaded.asStateFlow()
+
+
+    /*
+     * =========================================
+     * LOAD DATA
+     * =========================================
+     */
+
+    fun loadData(
+        context: Context? = null
+    ) {
+
+        val currentUserId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
+
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val remoteCategories = supabase.from("subject_categories").select().decodeList<SubjectCategory>()
-                val remoteNotes = supabase.from("notes").select().decodeList<Note>()
 
-                val uiModels = remoteCategories.map { category ->
-                    val parsedColor = try {
-                        Color(category.colorHex.toColorInt())
-                    } catch (e: Exception) {
-                        Color(0xFF4FC3F7)
+            _isLoaded.value = false
+
+            try {
+
+                /*
+                 * LOAD NOTES
+                 */
+
+                val fetchedNotes =
+                    supabase
+                        .from("notes")
+                        .select {
+
+                            filter {
+
+                                eq(
+                                    "user_id",
+                                    currentUserId
+                                )
+                            }
+                        }
+                        .decodeList<Note>()
+
+
+                /*
+                 * LOAD SUBJECTS
+                 */
+
+                val fetchedSubjects =
+                    supabase
+                        .from("subject_categories")
+                        .select {
+
+                            filter {
+
+                                eq(
+                                    "user_id",
+                                    currentUserId
+                                )
+                            }
+                        }
+                        .decodeList<SubjectCategoryRow>()
+
+
+                /*
+                 * SAVE NOTES
+                 */
+
+                _notes.value = fetchedNotes
+
+
+                /*
+                 * GROUP NOTES UNDER SUBJECT
+                 */
+
+                val subjectList =
+                    fetchedSubjects.map { subject ->
+
+                        SubjectUiModel(
+
+                            name = subject.name,
+
+                            colorHex = subject.colorHex,
+
+                            notes =
+                                fetchedNotes.filter { note ->
+
+                                    note.subjectName.equals(
+                                        subject.name,
+                                        ignoreCase = true
+                                    )
+                                }
+                        )
                     }
-                    SubjectUiModel(
-                        name = category.name,
-                        cardColor = parsedColor,
-                        notes = remoteNotes.filter { it.subjectName.equals(category.name, ignoreCase = true) }
-                    )
-                }
-                _subjects.value = uiModels
+
+
+                /*
+                 * SAVE SUBJECTS
+                 */
+
+                _subjects.value = subjectList
+
+
             } catch (e: Exception) {
-                if (context != null) {
+
+                e.printStackTrace()
+
+                context?.let {
+
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Load: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+
+                        Toast.makeText(
+                            it,
+                            "Unable to load notes: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
+
             } finally {
+
                 _isLoaded.value = true
             }
         }
     }
 
-    fun createSubject(subjectName: String, context: Context? = null) {
-        val trimmed = subjectName.trim()
-        if (trimmed.isEmpty()) return
 
-        val chosenColor = availableHexColors.random()
-        val parsedColor = try {
-            Color(chosenColor.toColorInt())
-        } catch (e: Exception) {
-            Color(0xFF4FC3F7)
-        }
+    /*
+     * =========================================
+     * GET NOTE BY ID
+     * =========================================
+     */
 
-        val currentList = _subjects.value.toMutableList()
-        if (currentList.none { it.name.equals(trimmed, ignoreCase = true) }) {
-            currentList.add(SubjectUiModel(name = trimmed, cardColor = parsedColor, notes = emptyList()))
-            _subjects.value = currentList
+    fun getNoteById(
+        noteId: String
+    ): Note? {
+
+        return _notes.value.find {
+
+            it.id == noteId
         }
+    }
+
+
+    /*
+     * =========================================
+     * SAVE NOTE
+     * =========================================
+     */
+
+    fun saveNote(
+
+        noteId: String?,
+
+        subjectName: String,
+
+        title: String,
+
+        content: String,
+
+        onSuccess: (() -> Unit)? = null
+
+    ) {
+
+        val currentUserId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
+
             try {
-                val newCategory = SubjectCategory(name = trimmed, colorHex = chosenColor)
-                supabase.from("subject_categories").insert(newCategory)
-            } catch (e: Exception) {
-                if (context != null) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Create: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                    }
+
+                /*
+                 * =================================
+                 * CREATE NEW NOTE
+                 * =================================
+                 */
+
+                if (
+                    noteId.isNullOrBlank() ||
+                    noteId == "new"
+                ) {
+
+                    val newNote = Note(
+
+                        title = title.trim(),
+
+                        content = content,
+
+                        subjectName = subjectName.trim(),
+
+                        userId = currentUserId
+                    )
+
+                    supabase
+                        .from("notes")
+                        .insert(newNote)
+
                 }
+
+                /*
+                 * =================================
+                 * UPDATE EXISTING NOTE
+                 * =================================
+                 */
+
+                else {
+
+                    val updatedNote = Note(
+
+                        id = noteId,
+
+                        title = title.trim(),
+
+                        content = content,
+
+                        subjectName = subjectName.trim(),
+
+                        userId = currentUserId
+                    )
+
+                    supabase
+                        .from("notes")
+                        .update(updatedNote) {
+
+                            filter {
+
+                                eq(
+                                    "id",
+                                    noteId
+                                )
+
+                                eq(
+                                    "user_id",
+                                    currentUserId
+                                )
+                            }
+                        }
+                }
+
+
+                /*
+                 * =================================
+                 * RELOAD
+                 * =================================
+                 */
+
+                loadData()
+
+
+                withContext(Dispatchers.Main) {
+
+                    onSuccess?.invoke()
+                }
+
+
+            } catch (e: Exception) {
+
+                e.printStackTrace()
             }
         }
     }
 
-    fun saveNote(noteId: String?, subjectName: String, title: String, content: String, context: Context? = null) {
-        val trimmedSubject = subjectName.trim()
-        val trimmedTitle = title.trim()
-        if (trimmedSubject.isEmpty() || trimmedTitle.isEmpty()) return
 
-        val targetNoteId = noteId ?: UUID.randomUUID().toString()
-        val newNote = Note(id = targetNoteId, title = trimmedTitle, content = content, subjectName = trimmedSubject)
+    /*
+     * =========================================
+     * DELETE NOTE
+     * =========================================
+     */
 
-        val currentList = _subjects.value.toMutableList()
-        val index = currentList.indexOfFirst { it.name.equals(trimmedSubject, ignoreCase = true) }
+    fun deleteNote(
 
-        if (index != -1) {
-            val targetSubject = currentList[index]
-            val updatedNotes = targetSubject.notes.filterNot { it.id == targetNoteId }.toMutableList()
-            updatedNotes.add(0, newNote)
-            currentList[index] = targetSubject.copy(notes = updatedNotes)
-        } else {
-            val chosenColor = availableHexColors.random()
-            val parsedColor = try {
-                Color(chosenColor.toColorInt())
-            } catch (e: Exception) {
-                Color(0xFF4FC3F7)
-            }
-            currentList.add(SubjectUiModel(name = trimmedSubject, cardColor = parsedColor, notes = listOf(newNote)))
-        }
+        noteId: String,
 
-        _subjects.value = currentList
+        context: Context? = null
+
+    ) {
+
+        val currentUserId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
+
             try {
-                if (index == -1) {
-                    val chosenColor = availableHexColors.random()
-                    val newCategory = SubjectCategory(name = trimmedSubject, colorHex = chosenColor)
-                    supabase.from("subject_categories").insert(newCategory)
-                }
 
-                if (noteId != null) {
-                    supabase.from("notes").update(newNote) { filter { eq("id", noteId) } }
-                } else {
-                    supabase.from("notes").insert(newNote)
-                }
+                supabase
+                    .from("notes")
+                    .delete {
+
+                        filter {
+
+                            eq(
+                                "id",
+                                noteId
+                            )
+
+                            eq(
+                                "user_id",
+                                currentUserId
+                            )
+                        }
+                    }
+
+
+                loadData(context)
+
+
             } catch (e: Exception) {
-                if (context != null) {
+
+                e.printStackTrace()
+
+                context?.let {
+
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Save: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+
+                        Toast.makeText(
+                            it,
+                            "Unable to delete note: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
         }
     }
 
-    fun getNoteAndSubject(noteId: String): Pair<Note, String>? {
-        _subjects.value.forEach { uiModel ->
-            val note = uiModel.notes.find { it.id == noteId }
-            if (note != null) return Pair(note, uiModel.name)
+
+    /*
+     * =========================================
+     * CREATE SUBJECT
+     * =========================================
+     */
+
+    fun createSubject(
+
+        name: String,
+
+        context: Context? = null,
+
+        colorHex: String = "#7BD5F5"
+
+    ) {
+
+        val currentUserId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
+
+
+        val cleanName = name.trim()
+
+
+        if (cleanName.isBlank()) {
+
+            return
         }
-        return null
-    }
 
-    fun deleteSubject(subjectName: String, context: Context? = null) {
-        val currentList = _subjects.value.toMutableList()
-        val index = currentList.indexOfFirst { it.name.equals(subjectName, ignoreCase = true) }
 
-        if (index != -1) {
-            currentList.removeAt(index)
-            _subjects.value = currentList
+        viewModelScope.launch(Dispatchers.IO) {
 
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    supabase.from("notes").delete { filter { eq("subject_name", subjectName) } }
-                    supabase.from("subject_categories").delete { filter { eq("name", subjectName) } }
-                } catch (e: Exception) {
-                    if (context != null) {
+            try {
+
+                /*
+                 * CHECK DUPLICATE SUBJECT
+                 */
+
+                val alreadyExists =
+                    _subjects.value.any {
+
+                        it.name.equals(
+                            cleanName,
+                            ignoreCase = true
+                        )
+                    }
+
+
+                if (alreadyExists) {
+
+                    context?.let {
+
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Delete Subject: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+
+                            Toast.makeText(
+                                it,
+                                "Subject already exists",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
+
+                    return@launch
+                }
+
+
+                /*
+                 * CREATE SUBJECT
+                 */
+
+                val newSubject =
+                    SubjectCategoryRow(
+
+                        name = cleanName,
+
+                        colorHex = colorHex,
+
+                        userId = currentUserId
+                    )
+
+
+                supabase
+                    .from("subject_categories")
+                    .insert(newSubject)
+
+
+                /*
+                 * RELOAD
+                 */
+
+                loadData(context)
+
+
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+
+                context?.let {
+
+                    withContext(Dispatchers.Main) {
+
+                        Toast.makeText(
+                            it,
+                            "Unable to create subject: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
         }
     }
 
-    fun deleteNote(noteId: String, context: Context? = null) {
-        val currentList = _subjects.value.toMutableList()
-        var isUpdated = false
 
-        for (i in currentList.indices) {
-            val subject = currentList[i]
-            if (subject.notes.any { it.id == noteId }) {
-                val updatedNotes = subject.notes.filterNot { it.id == noteId }
-                currentList[i] = subject.copy(notes = updatedNotes)
-                isUpdated = true
-                break
-            }
-        }
+    /*
+     * =========================================
+     * DELETE SUBJECT
+     * =========================================
+     */
 
-        if (isUpdated) {
-            _subjects.value = currentList
+    fun deleteSubject(
 
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    supabase.from("notes").delete { filter { eq("id", noteId) } }
-                } catch (e: Exception) {
-                    if (context != null) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Delete Note: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        subjectName: String,
+
+        context: Context? = null
+
+    ) {
+
+        val currentUserId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
+
+
+        viewModelScope.launch(Dispatchers.IO) {
+
+            try {
+
+                /*
+                 * DELETE NOTES
+                 */
+
+                supabase
+                    .from("notes")
+                    .delete {
+
+                        filter {
+
+                            eq(
+                                "subject_name",
+                                subjectName
+                            )
+
+                            eq(
+                                "user_id",
+                                currentUserId
+                            )
                         }
+                    }
+
+
+                /*
+                 * DELETE SUBJECT
+                 */
+
+                supabase
+                    .from("subject_categories")
+                    .delete {
+
+                        filter {
+
+                            eq(
+                                "name",
+                                subjectName
+                            )
+
+                            eq(
+                                "user_id",
+                                currentUserId
+                            )
+                        }
+                    }
+
+
+                /*
+                 * RELOAD
+                 */
+
+                loadData(context)
+
+
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+
+                context?.let {
+
+                    withContext(Dispatchers.Main) {
+
+                        Toast.makeText(
+                            it,
+                            "Unable to delete subject: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
         }
+    }
+
+
+    /*
+     * =========================================
+     * GET SUBJECT NAMES
+     * =========================================
+     */
+
+    fun getSubjectNames(): List<String> {
+
+        return _subjects.value
+            .map {
+                it.name
+            }
+            .filter {
+                it.isNotBlank()
+            }
     }
 }

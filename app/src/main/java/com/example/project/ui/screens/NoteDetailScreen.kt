@@ -1,15 +1,17 @@
 package com.example.project.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,229 +23,284 @@ import com.example.project.viewmodel.NotesViewModel
 fun NoteDetailScreen(
     navController: NavController,
     viewModel: NotesViewModel,
-    noteId: String? = null
+    noteId: String?
 ) {
-    var subjectName by remember {
-        mutableStateOf("")
-    }
-
-    var title by remember {
-        mutableStateOf("")
-    }
-
-    var content by remember {
-        mutableStateOf("")
-    }
-
-    var expanded by remember {
-        mutableStateOf(false)
-    }
+    var title by remember { mutableStateOf("") }
+    var subject by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
 
     val subjects by viewModel.subjects.collectAsState()
 
-    val existingSubjects = remember(subjects) {
-        subjects.map {
-            it.name
-        }
-    }
-
     LaunchedEffect(noteId) {
+        if (!noteId.isNullOrBlank() && noteId != "new") {
+            val note = viewModel.getNoteById(noteId)
 
-        if (noteId != null) {
-
-            val noteData =
-                viewModel.getNoteAndSubject(noteId)
-
-            if (noteData != null) {
-
-                subjectName = noteData.second
-
-                title = noteData.first.title
-
-                content = noteData.first.content
+            if (note != null) {
+                title = note.title
+                subject = note.subjectName
+                content = note.content
             }
         }
     }
 
-    Box(
+    val isNewNote = noteId.isNullOrBlank() || noteId == "new"
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
 
-        Column(
-            modifier = Modifier.fillMaxSize()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
 
-            // Top Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = 8.dp,
-                        vertical = 8.dp
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                // Back Button
-                IconButton(
-                    onClick = {
-                        navController.popBackStack()
-                    }
-                ) {
-
-                    Icon(
-                        imageVector =
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
-                    )
+            IconButton(
+                onClick = {
+                    navController.popBackStack()
                 }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back"
+                )
+            }
 
-                // Screen Title
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
-                    text = if (noteId == null) {
-                        "New Note"
-                    } else {
-                        "Edit Note"
-                    },
-                    modifier = Modifier.weight(1f),
-                    fontSize = 20.sp,
+                    text = if (isNewNote) "New Note" else "Edit Note",
+                    fontSize = 21.sp,
                     fontWeight = FontWeight.Bold
                 )
 
-                // Save Button
-                IconButton(
-                    onClick = {
-
-                        if (
-                            subjectName.isNotBlank() &&
-                            title.isNotBlank()
-                        ) {
-
-                            viewModel.saveNote(
-                                noteId,
-                                subjectName,
-                                title,
-                                content
-                            )
-
-                            navController.popBackStack()
-                        }
+                Text(
+                    text = if (isNewNote) {
+                        "Create something new"
+                    } else {
+                        "Update your note"
                     },
-
-                    enabled =
-                        subjectName.isNotBlank() &&
-                                title.isNotBlank()
-                ) {
-
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Save"
-                    )
-                }
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            // Note Form
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement =
-                    Arrangement.spacedBy(16.dp)
-            ) {
-
-                // Subject
-                ExposedDropdownMenuBox(
-                    expanded = expanded && existingSubjects.isNotEmpty(),
-                    onExpandedChange = {
-                        expanded = it
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = subjectName,
-                        onValueChange = {
-                            subjectName = it
-                        },
-                        readOnly = true,
-                        label = {
-                            Text("Subject")
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor()
-                    )
-
-                    if (existingSubjects.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = {
-                                expanded = false
+            FilledIconButton(
+                onClick = {
+                    if (
+                        title.isNotBlank() &&
+                        subject.isNotBlank()
+                    ) {
+                        viewModel.saveNote(
+                            noteId = noteId,
+                            subjectName = subject,
+                            title = title,
+                            content = content,
+                            onSuccess = {
+                                navController.popBackStack()
                             }
-                        ) {
-                            existingSubjects.forEach { suggestion ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(suggestion)
-                                    },
-                                    onClick = {
-                                        subjectName = suggestion
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Title
-                OutlinedTextField(
-                    value = title,
-
-                    onValueChange = {
-                        title = it
-                    },
-
-                    label = {
-                        Text("Title")
-                    },
-
-                    singleLine = true,
-
-                    modifier = Modifier.fillMaxWidth(),
-
-                    textStyle = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-
-                // Content
-                OutlinedTextField(
-                    value = content,
-
-                    onValueChange = {
-                        content = it
-                    },
-
-                    label = {
-                        Text("Content")
-                    },
-
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor =
-                                Color.Transparent,
-
-                            focusedBorderColor =
-                                Color.Transparent
                         )
+                    }
+                },
+                enabled = title.isNotBlank() && subject.isNotBlank(),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Save"
                 )
             }
         }
+
+        Spacer(
+            modifier = Modifier.height(28.dp)
+        )
+
+        Text(
+            text = "Title",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(
+            modifier = Modifier.height(6.dp)
+        )
+
+        TextField(
+            value = title,
+            onValueChange = {
+                title = it
+            },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = "Enter note title",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            ),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.35f
+                ),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.35f
+                ),
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0f
+                )
+            ),
+            shape = RoundedCornerShape(16.dp)
+        )
+
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
+
+        Text(
+            text = "Subject",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(
+            modifier = Modifier.height(6.dp)
+        )
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = {
+                if (subjects.isNotEmpty()) {
+                    expanded = !expanded
+                }
+            }
+        ) {
+
+            TextField(
+                value = subject,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                placeholder = {
+                    Text(
+                        text = "Select a subject",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Select Subject"
+                    )
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = 0.35f
+                    ),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = 0.35f
+                    ),
+                    focusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = 0f
+                    ),
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = 0f
+                    )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = {
+                    expanded = false
+                }
+            ) {
+                subjects.forEach { subjectItem ->
+
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = subjectItem.name,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
+                        onClick = {
+                            subject = subjectItem.name
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
+
+        Text(
+            text = "Content",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(
+            modifier = Modifier.height(6.dp)
+        )
+
+        TextField(
+            value = content,
+            onValueChange = {
+                content = it
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .clip(RoundedCornerShape(16.dp)),
+            placeholder = {
+                Text(
+                    text = "Write your note here...",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 16.sp,
+                lineHeight = 25.sp
+            ),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.35f
+                ),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.35f
+                ),
+                focusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0f
+                ),
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0f
+                )
+            )
+        )
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
     }
 }
