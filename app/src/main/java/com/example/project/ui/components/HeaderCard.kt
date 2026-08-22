@@ -26,6 +26,7 @@ import java.util.Locale
 fun HeaderCard(
     userName: String = "Yong",
     subtitle: String = "Are you ready!!",
+    hasNotifications: Boolean = false,
     onNotificationClick: () -> Unit = {}
 ) {
     val currentDateText = remember {
@@ -39,7 +40,7 @@ fun HeaderCard(
             .height(130.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF64B5F6)
+            containerColor = MaterialTheme.colorScheme.primary
         )
     ) {
         Row(
@@ -56,13 +57,13 @@ fun HeaderCard(
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .background(Color.White, shape = CircleShape),
+                        .background(MaterialTheme.colorScheme.surface, shape = CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Profile",
-                        tint = Color.Black,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -72,12 +73,12 @@ fun HeaderCard(
                         text = "Hi, $userName",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                     Text(
                         text = subtitle,
                         fontSize = 14.sp,
-                        color = Color.DarkGray
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -98,18 +99,16 @@ fun HeaderCard(
                     Text(
                         text = currentDateText,
                         fontSize = 10.sp,
-                        color = Color.DarkGray,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                         modifier = Modifier.padding(end = 4.dp)
                     )
-                    IconButton(
-                        onClick = onNotificationClick,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notification",
-                            tint = Color.Black
-                        )
+                    Box(modifier = Modifier.size(28.dp)) {
+                        IconButton(onClick = onNotificationClick, modifier = Modifier.size(28.dp)) {
+                            Icon(imageVector = Icons.Default.Notifications, contentDescription = "Deadline reminders", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
+                        if (hasNotifications) {
+                            Badge(modifier = Modifier.align(Alignment.TopEnd))
+                        }
                     }
                 }
             }

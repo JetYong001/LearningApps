@@ -29,6 +29,9 @@ class NotesViewModel : ViewModel() {
     private val _subjects = MutableStateFlow<List<SubjectUiModel>>(emptyList())
     val subjects: StateFlow<List<SubjectUiModel>> = _subjects.asStateFlow()
 
+    private val _isLoaded = MutableStateFlow(false)
+    val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
+
     private val availableHexColors = listOf(
         "#4FC3F7", "#BA68C8", "#FF8A65", "#AED581", "#FFD54F"
     )
@@ -38,6 +41,7 @@ class NotesViewModel : ViewModel() {
     }
 
     fun loadData(context: Context? = null) {
+        _isLoaded.value = false
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val remoteCategories = supabase.from("subject_categories").select().decodeList<SubjectCategory>()
@@ -52,7 +56,7 @@ class NotesViewModel : ViewModel() {
                     SubjectUiModel(
                         name = category.name,
                         cardColor = parsedColor,
-                        notes = remoteNotes.filter { it.subjectName == category.name }
+                        notes = remoteNotes.filter { it.subjectName.equals(category.name, ignoreCase = true) }
                     )
                 }
                 _subjects.value = uiModels
@@ -62,6 +66,8 @@ class NotesViewModel : ViewModel() {
                         Toast.makeText(context, "Load: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                     }
                 }
+            } finally {
+                _isLoaded.value = true
             }
         }
     }
@@ -154,5 +160,59 @@ class NotesViewModel : ViewModel() {
             if (note != null) return Pair(note, uiModel.name)
         }
         return null
+    }
+
+    fun deleteSubject(subjectName: String, context: Context? = null) {
+        val currentList = _subjects.value.toMutableList()
+        val index = currentList.indexOfFirst { it.name.equals(subjectName, ignoreCase = true) }
+
+        if (index != -1) {
+            currentList.removeAt(index)
+            _subjects.value = currentList
+
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    supabase.from("notes").delete { filter { eq("subject_name", subjectName) } }
+                    supabase.from("subject_categories").delete { filter { eq("name", subjectName) } }
+                } catch (e: Exception) {
+                    if (context != null) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Delete Subject: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun deleteNote(noteId: String, context: Context? = null) {
+        val currentList = _subjects.value.toMutableList()
+        var isUpdated = false
+
+        for (i in currentList.indices) {
+            val subject = currentList[i]
+            if (subject.notes.any { it.id == noteId }) {
+                val updatedNotes = subject.notes.filterNot { it.id == noteId }
+                currentList[i] = subject.copy(notes = updatedNotes)
+                isUpdated = true
+                break
+            }
+        }
+
+        if (isUpdated) {
+            _subjects.value = currentList
+
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    supabase.from("notes").delete { filter { eq("id", noteId) } }
+                } catch (e: Exception) {
+                    if (context != null) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Delete Note: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        }
     }
 }

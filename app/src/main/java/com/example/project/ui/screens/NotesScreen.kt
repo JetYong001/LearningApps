@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,7 +30,6 @@ import com.example.project.navigation.Screen
 import com.example.project.viewmodel.NotesViewModel
 import com.example.project.viewmodel.SubjectUiModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesScreen(
     navController: NavController,
@@ -37,30 +38,20 @@ fun NotesScreen(
     val context = LocalContext.current
     var showCreateSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
-
+    var subjectToDelete by remember { mutableStateOf<String?>(null) }
     val subjects by viewModel.subjects.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadData(context)
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate(Screen.NoteDetail.route) },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-            }
-        }
-    ) { paddingValues ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier = Modifier.fillMaxSize()
         ) {
             Box(
                 modifier = Modifier
@@ -88,7 +79,7 @@ fun NotesScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = null,
+                    contentDescription = "Search",
                     modifier = Modifier.size(28.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
@@ -96,24 +87,55 @@ fun NotesScreen(
                     onClick = { showCreateSubjectDialog = true },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7BD5F5))
                 ) {
-                    Text("Create Subject", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Create Subject",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(bottom = 90.dp)
             ) {
                 items(subjects) { subject ->
                     SubjectSection(
                         subject = subject,
                         onNoteClick = { note ->
                             navController.navigate(Screen.NoteView.createRoute(note.id))
+                        },
+                        onDeleteSubject = {
+                            subjectToDelete = subject.name
+                        },
+                        onGenerateFlashcards = {
+                            navController.navigate("flashcards_screen/${subject.name}")
                         }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+        }
+
+        FloatingActionButton(
+            onClick = {
+                if (subjects.isNotEmpty()) {
+                    navController.navigate(Screen.NoteDetail.route)
+                } else {
+                    android.widget.Toast.makeText(context, "Please create a subject first", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            shape = CircleShape,
+            containerColor = if (subjects.isNotEmpty()) MaterialTheme.colorScheme.surfaceVariant else Color.Gray,
+            contentColor = if (subjects.isNotEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else Color.LightGray
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add Note"
+            )
         }
     }
 
@@ -130,18 +152,47 @@ fun NotesScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (newSubjectName.isNotBlank()) {
-                        viewModel.createSubject(newSubjectName, context)
-                        newSubjectName = ""
-                        showCreateSubjectDialog = false
+                TextButton(
+                    onClick = {
+                        if (newSubjectName.isNotBlank()) {
+                            viewModel.createSubject(newSubjectName, context)
+                            newSubjectName = ""
+                            showCreateSubjectDialog = false
+                        }
                     }
-                }) {
+                ) {
                     Text("Create")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateSubjectDialog = false }) {
+                TextButton(
+                    onClick = { showCreateSubjectDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (subjectToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { subjectToDelete = null },
+            title = { Text("Delete Subject") },
+            text = { Text("Are you sure you want to delete this subject and all its notes? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSubject(subjectToDelete!!, context)
+                        subjectToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { subjectToDelete = null }
+                ) {
                     Text("Cancel")
                 }
             }
@@ -152,9 +203,13 @@ fun NotesScreen(
 @Composable
 fun SubjectSection(
     subject: SubjectUiModel,
-    onNoteClick: (Note) -> Unit
+    onNoteClick: (Note) -> Unit,
+    onDeleteSubject: () -> Unit,
+    onGenerateFlashcards: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -168,6 +223,24 @@ fun SubjectSection(
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onBackground
             )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onGenerateFlashcards) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "Generate Flashcards",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = onDeleteSubject) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Subject",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
 
         LazyRow(

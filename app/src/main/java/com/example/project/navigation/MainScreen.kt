@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -24,6 +25,7 @@ import com.example.project.ui.screens.NoteViewScreen
 import com.example.project.ui.screens.PlannerScreen
 import com.example.project.ui.screens.ProgressScreen
 import com.example.project.ui.screens.SettingsScreen
+import com.example.project.viewmodel.FlashcardsViewModel
 import com.example.project.viewmodel.ThemeViewModel
 import com.example.project.viewmodel.NotesViewModel
 
@@ -134,8 +136,23 @@ fun MainScreen(
             composable(Screen.FocusSession.route) {
                 FocusSessionScreen(navController = navController, viewModel = viewModel())
             }
-            composable(Screen.Flashcards.route) { FlashcardsScreen() }
+            composable("flashcards_screen/{subjectName}") { backStackEntry ->
+                val subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+                val previousEntry = remember(backStackEntry) { navController.previousBackStackEntry }
+                val notesViewModel: NotesViewModel = if (previousEntry != null) {
+                    viewModel(previousEntry)
+                } else {
+                    viewModel()
+                }
+                val flashcardsViewModel: FlashcardsViewModel = viewModel()
 
+                FlashcardsScreen(
+                    navController = navController,
+                    subjectName = subjectName,
+                    notesViewModel = notesViewModel,
+                    flashcardsViewModel = flashcardsViewModel
+                )
+            }
             composable("settings") {
                 SettingsScreen(navController = navController, themeViewModel = themeViewModel)
             }
