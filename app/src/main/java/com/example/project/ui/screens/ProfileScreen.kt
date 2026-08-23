@@ -32,11 +32,8 @@ fun ProfileScreen(
     navController: NavController,
     viewModel: ProfileViewModel = viewModel()
 ) {
-
     val profile by viewModel.profile.collectAsState()
-
     val isUpdating by viewModel.isUpdating.collectAsState()
-
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     val context = LocalContext.current
@@ -45,13 +42,17 @@ fun ProfileScreen(
         mutableStateOf<String?>(null)
     }
 
+    var imageVersion by remember {
+        mutableLongStateOf(System.currentTimeMillis())
+    }
+
     val imagePickerLauncher =
         rememberLauncherForActivityResult(
-            contract =
-                ActivityResultContracts.GetContent()
+            contract = ActivityResultContracts.GetContent()
         ) { uri ->
 
             if (uri != null) {
+                imageVersion = System.currentTimeMillis()
 
                 viewModel.updateProfilePicture(
                     context,
@@ -69,25 +70,17 @@ fun ProfileScreen(
             ?.savedStateHandle
             ?.get<Boolean>("username_updated")
     ) {
-
         val updated =
             navController.currentBackStackEntry
                 ?.savedStateHandle
-                ?.get<Boolean>(
-                    "username_updated"
-                )
+                ?.get<Boolean>("username_updated")
 
         if (updated == true) {
+            popupMessage = "Username updated successfully!"
 
-            popupMessage =
-                "Username updated successfully!"
-
-            navController
-                .currentBackStackEntry
+            navController.currentBackStackEntry
                 ?.savedStateHandle
-                ?.remove<Boolean>(
-                    "username_updated"
-                )
+                ?.remove<Boolean>("username_updated")
 
             delay(2500)
 
@@ -100,25 +93,17 @@ fun ProfileScreen(
             ?.savedStateHandle
             ?.get<Boolean>("password_changed")
     ) {
-
         val changed =
             navController.currentBackStackEntry
                 ?.savedStateHandle
-                ?.get<Boolean>(
-                    "password_changed"
-                )
+                ?.get<Boolean>("password_changed")
 
         if (changed == true) {
+            popupMessage = "Password changed successfully!"
 
-            popupMessage =
-                "Password changed successfully!"
-
-            navController
-                .currentBackStackEntry
+            navController.currentBackStackEntry
                 ?.savedStateHandle
-                ?.remove<Boolean>(
-                    "password_changed"
-                )
+                ?.remove<Boolean>("password_changed")
 
             delay(2500)
 
@@ -126,23 +111,12 @@ fun ProfileScreen(
         }
     }
 
-    val primary =
-        MaterialTheme.colorScheme.primary
-
-    val background =
-        MaterialTheme.colorScheme.background
-
-    val surface =
-        MaterialTheme.colorScheme.surface
-
-    val onSurface =
-        MaterialTheme.colorScheme.onSurface
-
-    val onSurfaceVariant =
-        MaterialTheme.colorScheme.onSurfaceVariant
-
-    val onPrimary =
-        MaterialTheme.colorScheme.onPrimary
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.background
+    val surface = MaterialTheme.colorScheme.surface
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
 
     Box(
         modifier = Modifier
@@ -161,8 +135,7 @@ fun ProfileScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment =
-                    Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
                 IconButton(
@@ -170,12 +143,9 @@ fun ProfileScreen(
                         navController.popBackStack()
                     }
                 ) {
-
                     Icon(
-                        imageVector =
-                            Icons.Default.ArrowBack,
-                        contentDescription =
-                            "Back",
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
                         tint = onSurface
                     )
                 }
@@ -186,8 +156,7 @@ fun ProfileScreen(
 
                 Text(
                     text = "Profile",
-                    style =
-                        MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleLarge,
                     color = onSurface
                 )
             }
@@ -200,10 +169,8 @@ fun ProfileScreen(
 
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment =
-                        Alignment.Center
+                    contentAlignment = Alignment.Center
                 ) {
-
                     CircularProgressIndicator(
                         color = primary
                     )
@@ -212,10 +179,8 @@ fun ProfileScreen(
             } else {
 
                 Column(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
                     Box(
@@ -224,11 +189,9 @@ fun ProfileScreen(
                             .clickable(
                                 enabled = !isUpdating
                             ) {
-                                imagePickerLauncher
-                                    .launch("image/*")
+                                imagePickerLauncher.launch("image/*")
                             },
-                        contentAlignment =
-                            Alignment.BottomEnd
+                        contentAlignment = Alignment.BottomEnd
                     ) {
 
                         Box(
@@ -236,45 +199,38 @@ fun ProfileScreen(
                                 .size(132.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    primary.copy(
-                                        alpha = 0.12f
-                                    )
+                                    primary.copy(alpha = 0.12f)
                                 ),
-                            contentAlignment =
-                                Alignment.Center
+                            contentAlignment = Alignment.Center
                         ) {
 
-                            if (
-                                !profile!!
-                                    .profile_picture
-                                    .isNullOrBlank()
-                            ) {
+                            val profilePicture =
+                                profile!!.profile_picture
+
+                            if (!profilePicture.isNullOrBlank()) {
+
+                                val imageUrl =
+                                    if (profilePicture.contains("?")) {
+                                        "$profilePicture&v=$imageVersion"
+                                    } else {
+                                        "$profilePicture?v=$imageVersion"
+                                    }
 
                                 AsyncImage(
-                                    model =
-                                        profile!!
-                                            .profile_picture,
-                                    contentDescription =
-                                        "Profile Picture",
-                                    modifier =
-                                        Modifier
-                                            .fillMaxSize()
-                                            .clip(
-                                                CircleShape
-                                            ),
-                                    contentScale =
-                                        ContentScale.Crop
+                                    model = imageUrl,
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
                                 )
 
                             } else {
 
                                 Icon(
-                                    imageVector =
-                                        Icons.Default.Person,
-                                    contentDescription =
-                                        "Profile Picture",
-                                    modifier =
-                                        Modifier.size(68.dp),
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier.size(68.dp),
                                     tint = primary
                                 )
                             }
@@ -282,8 +238,7 @@ fun ProfileScreen(
                             if (isUpdating) {
 
                                 CircularProgressIndicator(
-                                    modifier =
-                                        Modifier.size(42.dp),
+                                    modifier = Modifier.size(42.dp),
                                     color = primary,
                                     strokeWidth = 4.dp
                                 )
@@ -295,115 +250,90 @@ fun ProfileScreen(
                                 .size(40.dp)
                                 .clip(CircleShape)
                                 .background(primary),
-                            contentAlignment =
-                                Alignment.Center
+                            contentAlignment = Alignment.Center
                         ) {
 
                             Icon(
-                                imageVector =
-                                    Icons.Default.Edit,
-                                contentDescription =
-                                    "Change Picture",
-                                modifier =
-                                    Modifier.size(20.dp),
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Change Picture",
+                                modifier = Modifier.size(20.dp),
                                 tint = onPrimary
                             )
                         }
                     }
 
                     Spacer(
-                        modifier =
-                            Modifier.height(18.dp)
+                        modifier = Modifier.height(18.dp)
                     )
 
                     Text(
                         text = profile!!.username,
-                        style =
-                            MaterialTheme.typography
-                                .headlineSmall,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = onSurface
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.height(4.dp)
+                        modifier = Modifier.height(4.dp)
                     )
 
                     Text(
-                        text =
-                            "Tap your photo to change it",
-                        style =
-                            MaterialTheme.typography.bodySmall,
+                        text = "Tap your photo to change it",
+                        style = MaterialTheme.typography.bodySmall,
                         color = onSurfaceVariant
                     )
                 }
 
                 Spacer(
-                    modifier =
-                        Modifier.height(32.dp)
+                    modifier = Modifier.height(32.dp)
                 )
 
                 Text(
                     text = "Profile Information",
-                    style =
-                        MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = onSurface
                 )
 
                 Spacer(
-                    modifier =
-                        Modifier.height(12.dp)
+                    modifier = Modifier.height(12.dp)
                 )
 
                 Card(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    shape =
-                        RoundedCornerShape(22.dp),
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = surface
-                        ),
-                    elevation =
-                        CardDefaults.cardElevation(
-                            defaultElevation = 2.dp
-                        )
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = surface
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
                 ) {
 
                     Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
                     ) {
 
                         Text(
                             text = "Username",
-                            style =
-                                MaterialTheme.typography
-                                    .labelMedium,
+                            style = MaterialTheme.typography.labelMedium,
                             color = onSurfaceVariant
                         )
 
                         Spacer(
-                            modifier =
-                                Modifier.height(6.dp)
+                            modifier = Modifier.height(6.dp)
                         )
 
                         Text(
-                            text =
-                                profile!!.username,
-                            style =
-                                MaterialTheme.typography
-                                    .bodyLarge,
+                            text = profile!!.username,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = onSurface
                         )
                     }
                 }
 
                 Spacer(
-                    modifier =
-                        Modifier.height(18.dp)
+                    modifier = Modifier.height(18.dp)
                 )
 
                 Button(
@@ -412,31 +342,26 @@ fun ProfileScreen(
                             Screen.EditProfile.route
                         )
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(54.dp),
-                    shape =
-                        RoundedCornerShape(18.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
 
                     Icon(
-                        imageVector =
-                            Icons.Default.Edit,
+                        imageVector = Icons.Default.Edit,
                         contentDescription = null
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.width(8.dp)
+                        modifier = Modifier.width(8.dp)
                     )
 
                     Text("Edit Username")
                 }
 
                 Spacer(
-                    modifier =
-                        Modifier.height(12.dp)
+                    modifier = Modifier.height(12.dp)
                 )
 
                 OutlinedButton(
@@ -445,23 +370,19 @@ fun ProfileScreen(
                             Screen.ChangePassword.route
                         )
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(54.dp),
-                    shape =
-                        RoundedCornerShape(18.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
 
                     Icon(
-                        imageVector =
-                            Icons.Default.Lock,
+                        imageVector = Icons.Default.Lock,
                         contentDescription = null
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.width(8.dp)
+                        modifier = Modifier.width(8.dp)
                     )
 
                     Text("Change Password")
@@ -472,45 +393,36 @@ fun ProfileScreen(
         popupMessage?.let { message ->
 
             Surface(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                shape =
-                    RoundedCornerShape(18.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = primary,
                 tonalElevation = 6.dp
             ) {
 
                 Row(
-                    modifier =
-                        Modifier.padding(
-                            horizontal = 18.dp,
-                            vertical = 14.dp
-                        ),
-                    verticalAlignment =
-                        Alignment.CenterVertically
+                    modifier = Modifier.padding(
+                        horizontal = 18.dp,
+                        vertical = 14.dp
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
 
                     Text(
                         text = "✓",
                         color = onPrimary,
-                        style =
-                            MaterialTheme.typography
-                                .titleMedium
+                        style = MaterialTheme.typography.titleMedium
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.width(10.dp)
+                        modifier = Modifier.width(10.dp)
                     )
 
                     Text(
                         text = message,
                         color = onPrimary,
-                        style =
-                            MaterialTheme.typography
-                                .bodyMedium
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }

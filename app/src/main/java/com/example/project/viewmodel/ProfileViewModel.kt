@@ -39,11 +39,8 @@ class ProfileViewModel : ViewModel() {
     }
 
     fun loadProfile() {
-
         viewModelScope.launch {
-
             try {
-
                 val userId =
                     supabase.auth
                         .currentUserOrNull()
@@ -55,10 +52,7 @@ class ProfileViewModel : ViewModel() {
                         .from("profiles")
                         .select {
                             filter {
-                                eq(
-                                    "id",
-                                    userId
-                                )
+                                eq("id", userId)
                             }
                         }
                         .decodeSingle<Profile>()
@@ -66,7 +60,6 @@ class ProfileViewModel : ViewModel() {
                 _profile.value = result
 
             } catch (e: Exception) {
-
                 _errorMessage.value =
                     e.message
                         ?: "Failed to load profile"
@@ -78,11 +71,8 @@ class ProfileViewModel : ViewModel() {
         username: String,
         onSuccess: () -> Unit
     ) {
-
         viewModelScope.launch {
-
             try {
-
                 val userId =
                     supabase.auth
                         .currentUserOrNull()
@@ -95,14 +85,11 @@ class ProfileViewModel : ViewModel() {
                 supabase
                     .from("profiles")
                     .update({
-
                         set(
                             "username",
                             username
                         )
-
                     }) {
-
                         filter {
                             eq(
                                 "id",
@@ -111,18 +98,28 @@ class ProfileViewModel : ViewModel() {
                         }
                     }
 
-                loadProfile()
+                val updatedProfile =
+                    supabase
+                        .from("profiles")
+                        .select {
+                            filter {
+                                eq(
+                                    "id",
+                                    userId
+                                )
+                            }
+                        }
+                        .decodeSingle<Profile>()
+
+                _profile.value = updatedProfile
 
                 onSuccess()
 
             } catch (e: Exception) {
-
                 _errorMessage.value =
                     e.message
                         ?: "Failed to update username"
-
             } finally {
-
                 _isUpdating.value = false
             }
         }
@@ -132,11 +129,8 @@ class ProfileViewModel : ViewModel() {
         context: Context,
         imageUri: Uri
     ) {
-
         viewModelScope.launch {
-
             try {
-
                 val userId =
                     supabase.auth
                         .currentUserOrNull()
@@ -151,7 +145,6 @@ class ProfileViewModel : ViewModel() {
                         .openInputStream(imageUri)
 
                 if (inputStream == null) {
-
                     _errorMessage.value =
                         "Unable to open selected image"
 
@@ -176,23 +169,23 @@ class ProfileViewModel : ViewModel() {
                         upsert = true
                     }
 
-                val profilePictureUrl =
+                val baseUrl =
                     supabase
                         .storage
                         .from("profile-pictures")
                         .publicUrl(filePath)
 
+                val profilePictureUrl =
+                    "$baseUrl?v=${System.currentTimeMillis()}"
+
                 supabase
                     .from("profiles")
                     .update({
-
                         set(
                             "profile_picture",
                             profilePictureUrl
                         )
-
                     }) {
-
                         filter {
                             eq(
                                 "id",
@@ -201,16 +194,26 @@ class ProfileViewModel : ViewModel() {
                         }
                     }
 
-                loadProfile()
+                val updatedProfile =
+                    supabase
+                        .from("profiles")
+                        .select {
+                            filter {
+                                eq(
+                                    "id",
+                                    userId
+                                )
+                            }
+                        }
+                        .decodeSingle<Profile>()
+
+                _profile.value = updatedProfile
 
             } catch (e: Exception) {
-
                 _errorMessage.value =
                     e.message
                         ?: "Failed to update profile picture"
-
             } finally {
-
                 _isUpdating.value = false
             }
         }
