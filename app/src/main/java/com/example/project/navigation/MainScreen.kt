@@ -26,6 +26,7 @@ import com.example.project.ui.screens.ProgressScreen
 import com.example.project.ui.screens.SettingsScreen
 import com.example.project.viewmodel.ThemeViewModel
 import com.example.project.viewmodel.NotesViewModel
+import com.example.project.viewmodel.ProgressViewModel
 
 @Composable
 fun MainScreen(
@@ -128,7 +129,11 @@ fun MainScreen(
             }
 
             composable(Screen.Progress.route) {
-                ProgressScreen(navController = navController)
+                val progressViewModel: ProgressViewModel = viewModel()
+                ProgressScreen(
+                    navController = navController,
+                    viewModel = progressViewModel
+                )
             }
 
             composable(Screen.FocusSession.route) {
@@ -136,7 +141,7 @@ fun MainScreen(
             }
             composable(Screen.Flashcards.route) { FlashcardsScreen() }
 
-            composable("settings") {
+            composable(Screen.Settings.route) {
                 SettingsScreen(navController = navController, themeViewModel = themeViewModel)
             }
         }

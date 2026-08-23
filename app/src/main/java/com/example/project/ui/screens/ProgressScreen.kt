@@ -1,51 +1,69 @@
 package com.example.project.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.project.navigation.Screen
+import com.example.project.ui.components.OverallProgressRingCard
+import com.example.project.ui.components.StudyConsistencyCard
+import com.example.project.ui.components.StudyStreaksCard
+import com.example.project.ui.components.UserProfileHeaderCard
+import com.example.project.viewmodel.ProgressViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProgressScreen(
-    navController: NavController
+    navController: NavController,
+    viewModel: ProgressViewModel
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Progress") },
-                actions = {
-                    IconButton(onClick = { navController.navigate("settings") }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
+    val uiState by viewModel.uiState.collectAsState()
+
+    val userName = uiState.userProfile?.fullName ?: "Yong Jet Hong"
+    val userRole = uiState.userProfile?.role ?: "Student"
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        UserProfileHeaderCard(
+            name = userName,
+            role = userRole,
+            onSettingsClick = {
+                navController.navigate(Screen.Settings.route)
+            }
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Progress Content",
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Box(modifier = Modifier.weight(1f)) {
+                OverallProgressRingCard(
+                    progress = uiState.overallProgress,
+                    onClick = {
+                    }
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                StudyStreaksCard(
+                    streakCount = 5
+                )
+            }
         }
+
+        StudyConsistencyCard(
+            sessions = uiState.studySessions
+        )
     }
 }
