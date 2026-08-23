@@ -19,16 +19,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-
-/*
- * =========================================
- * SUBJECT DATABASE MODEL
- * =========================================
- */
-
 @Serializable
 private data class SubjectCategoryRow(
-
     @SerialName("name")
     val name: String = "",
 
@@ -39,54 +31,39 @@ private data class SubjectCategoryRow(
     val userId: String = ""
 )
 
-
-/*
- * =========================================
- * SUBJECT UI MODEL
- * =========================================
- */
-
 data class SubjectUiModel(
-
     val name: String = "",
-
     val colorHex: String = "#7BD5F5",
-
     val notes: List<Note> = emptyList()
-
 ) {
-
     val cardColor: Color
         get() {
-
             return try {
-
                 Color(
                     colorHex.toColorInt()
                 )
-
             } catch (e: Exception) {
-
                 Color(0xFF7BD5F5)
             }
         }
 }
 
-
-/*
- * =========================================
- * VIEW MODEL
- * =========================================
- */
-
 class NotesViewModel : ViewModel() {
 
-
-    /*
-     * =====================================
-     * NOTES
-     * =====================================
-     */
+    private val noteColors = listOf(
+        "#FFE5B4",
+        "#E8D7FF",
+        "#FFD6E0",
+        "#FFF0B3",
+        "#D8F3DC",
+        "#FFDAB9",
+        "#F8D7DA",
+        "#E2E8CB",
+        "#FFE0AC",
+        "#E6D5F7",
+        "#FFCCD5",
+        "#E3F0D5"
+    )
 
     private val _notes =
         MutableStateFlow<List<Note>>(emptyList())
@@ -94,25 +71,11 @@ class NotesViewModel : ViewModel() {
     val notes: StateFlow<List<Note>> =
         _notes.asStateFlow()
 
-
-    /*
-     * =====================================
-     * SUBJECTS
-     * =====================================
-     */
-
     private val _subjects =
         MutableStateFlow<List<SubjectUiModel>>(emptyList())
 
     val subjects: StateFlow<List<SubjectUiModel>> =
         _subjects.asStateFlow()
-
-
-    /*
-     * =====================================
-     * LOADING
-     * =====================================
-     */
 
     private val _isLoaded =
         MutableStateFlow(false)
@@ -120,17 +83,9 @@ class NotesViewModel : ViewModel() {
     val isLoaded: StateFlow<Boolean> =
         _isLoaded.asStateFlow()
 
-
-    /*
-     * =========================================
-     * LOAD DATA
-     * =========================================
-     */
-
     fun loadData(
         context: Context? = null
     ) {
-
         val currentUserId =
             supabase.auth.currentUserOrNull()?.id
                 ?: return
@@ -141,17 +96,11 @@ class NotesViewModel : ViewModel() {
 
             try {
 
-                /*
-                 * LOAD NOTES
-                 */
-
                 val fetchedNotes =
                     supabase
                         .from("notes")
                         .select {
-
                             filter {
-
                                 eq(
                                     "user_id",
                                     currentUserId
@@ -160,18 +109,11 @@ class NotesViewModel : ViewModel() {
                         }
                         .decodeList<Note>()
 
-
-                /*
-                 * LOAD SUBJECTS
-                 */
-
                 val fetchedSubjects =
                     supabase
                         .from("subject_categories")
                         .select {
-
                             filter {
-
                                 eq(
                                     "user_id",
                                     currentUserId
@@ -180,45 +122,24 @@ class NotesViewModel : ViewModel() {
                         }
                         .decodeList<SubjectCategoryRow>()
 
-
-                /*
-                 * SAVE NOTES
-                 */
-
                 _notes.value = fetchedNotes
-
-
-                /*
-                 * GROUP NOTES UNDER SUBJECT
-                 */
 
                 val subjectList =
                     fetchedSubjects.map { subject ->
 
                         SubjectUiModel(
-
                             name = subject.name,
-
                             colorHex = subject.colorHex,
-
-                            notes =
-                                fetchedNotes.filter { note ->
-
-                                    note.subjectName.equals(
-                                        subject.name,
-                                        ignoreCase = true
-                                    )
-                                }
+                            notes = fetchedNotes.filter { note ->
+                                note.subjectName.equals(
+                                    subject.name,
+                                    ignoreCase = true
+                                )
+                            }
                         )
                     }
 
-
-                /*
-                 * SAVE SUBJECTS
-                 */
-
                 _subjects.value = subjectList
-
 
             } catch (e: Exception) {
 
@@ -243,42 +164,21 @@ class NotesViewModel : ViewModel() {
         }
     }
 
-
-    /*
-     * =========================================
-     * GET NOTE BY ID
-     * =========================================
-     */
-
     fun getNoteById(
         noteId: String
     ): Note? {
 
         return _notes.value.find {
-
             it.id == noteId
         }
     }
 
-
-    /*
-     * =========================================
-     * SAVE NOTE
-     * =========================================
-     */
-
     fun saveNote(
-
         noteId: String?,
-
         subjectName: String,
-
         title: String,
-
         content: String,
-
         onSuccess: (() -> Unit)? = null
-
     ) {
 
         val currentUserId =
@@ -289,53 +189,41 @@ class NotesViewModel : ViewModel() {
 
             try {
 
-                /*
-                 * =================================
-                 * CREATE NEW NOTE
-                 * =================================
-                 */
-
                 if (
                     noteId.isNullOrBlank() ||
                     noteId == "new"
                 ) {
 
                     val newNote = Note(
-
                         title = title.trim(),
-
                         content = content,
-
                         subjectName = subjectName.trim(),
-
-                        userId = currentUserId
+                        userId = currentUserId,
+                        color = noteColors.random()
                     )
 
                     supabase
                         .from("notes")
                         .insert(newNote)
 
-                }
+                } else {
 
-                /*
-                 * =================================
-                 * UPDATE EXISTING NOTE
-                 * =================================
-                 */
+                    val existingNote =
+                        _notes.value.find {
+                            it.id == noteId
+                        }
 
-                else {
+                    val noteColor =
+                        existingNote?.color
+                            ?: noteColors.random()
 
                     val updatedNote = Note(
-
                         id = noteId,
-
                         title = title.trim(),
-
                         content = content,
-
                         subjectName = subjectName.trim(),
-
-                        userId = currentUserId
+                        userId = currentUserId,
+                        color = noteColor
                     )
 
                     supabase
@@ -357,21 +245,11 @@ class NotesViewModel : ViewModel() {
                         }
                 }
 
-
-                /*
-                 * =================================
-                 * RELOAD
-                 * =================================
-                 */
-
                 loadData()
 
-
                 withContext(Dispatchers.Main) {
-
                     onSuccess?.invoke()
                 }
-
 
             } catch (e: Exception) {
 
@@ -380,19 +258,9 @@ class NotesViewModel : ViewModel() {
         }
     }
 
-
-    /*
-     * =========================================
-     * DELETE NOTE
-     * =========================================
-     */
-
     fun deleteNote(
-
         noteId: String,
-
         context: Context? = null
-
     ) {
 
         val currentUserId =
@@ -421,9 +289,7 @@ class NotesViewModel : ViewModel() {
                         }
                     }
 
-
                 loadData(context)
-
 
             } catch (e: Exception) {
 
@@ -444,44 +310,26 @@ class NotesViewModel : ViewModel() {
         }
     }
 
-
-    /*
-     * =========================================
-     * CREATE SUBJECT
-     * =========================================
-     */
-
     fun createSubject(
-
         name: String,
-
         context: Context? = null,
-
         colorHex: String = "#7BD5F5"
-
     ) {
 
         val currentUserId =
             supabase.auth.currentUserOrNull()?.id
                 ?: return
 
-
-        val cleanName = name.trim()
-
+        val cleanName =
+            name.trim()
 
         if (cleanName.isBlank()) {
-
             return
         }
-
 
         viewModelScope.launch(Dispatchers.IO) {
 
             try {
-
-                /*
-                 * CHECK DUPLICATE SUBJECT
-                 */
 
                 val alreadyExists =
                     _subjects.value.any {
@@ -491,7 +339,6 @@ class NotesViewModel : ViewModel() {
                             ignoreCase = true
                         )
                     }
-
 
                 if (alreadyExists) {
 
@@ -510,33 +357,18 @@ class NotesViewModel : ViewModel() {
                     return@launch
                 }
 
-
-                /*
-                 * CREATE SUBJECT
-                 */
-
                 val newSubject =
                     SubjectCategoryRow(
-
                         name = cleanName,
-
                         colorHex = colorHex,
-
                         userId = currentUserId
                     )
-
 
                 supabase
                     .from("subject_categories")
                     .insert(newSubject)
 
-
-                /*
-                 * RELOAD
-                 */
-
                 loadData(context)
-
 
             } catch (e: Exception) {
 
@@ -557,33 +389,18 @@ class NotesViewModel : ViewModel() {
         }
     }
 
-
-    /*
-     * =========================================
-     * DELETE SUBJECT
-     * =========================================
-     */
-
     fun deleteSubject(
-
         subjectName: String,
-
         context: Context? = null
-
     ) {
 
         val currentUserId =
             supabase.auth.currentUserOrNull()?.id
                 ?: return
 
-
         viewModelScope.launch(Dispatchers.IO) {
 
             try {
-
-                /*
-                 * DELETE NOTES
-                 */
 
                 supabase
                     .from("notes")
@@ -603,11 +420,6 @@ class NotesViewModel : ViewModel() {
                         }
                     }
 
-
-                /*
-                 * DELETE SUBJECT
-                 */
-
                 supabase
                     .from("subject_categories")
                     .delete {
@@ -626,13 +438,7 @@ class NotesViewModel : ViewModel() {
                         }
                     }
 
-
-                /*
-                 * RELOAD
-                 */
-
                 loadData(context)
-
 
             } catch (e: Exception) {
 
@@ -652,13 +458,6 @@ class NotesViewModel : ViewModel() {
             }
         }
     }
-
-
-    /*
-     * =========================================
-     * GET SUBJECT NAMES
-     * =========================================
-     */
 
     fun getSubjectNames(): List<String> {
 

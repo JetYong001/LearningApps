@@ -1,5 +1,6 @@
 package com.example.project.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.toColorInt
 import androidx.navigation.NavController
 import com.example.project.model.Note
 import com.example.project.navigation.Screen
@@ -36,102 +39,326 @@ fun NotesScreen(
     viewModel: NotesViewModel
 ) {
     val context = LocalContext.current
-    var showCreateSubjectDialog by remember { mutableStateOf(false) }
-    var newSubjectName by remember { mutableStateOf("") }
-    var subjectToDelete by remember { mutableStateOf<String?>(null) }
+
+    var showCreateSubjectDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var newSubjectName by remember {
+        mutableStateOf("")
+    }
+
+    var subjectToDelete by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var searchText by remember {
+        mutableStateOf("")
+    }
+
     val subjects by viewModel.subjects.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadData(context)
     }
 
+    val filteredSubjects = remember(
+        subjects,
+        searchText
+    ) {
+        if (searchText.isBlank()) {
+            subjects
+        } else {
+            subjects.mapNotNull { subject ->
+
+                val subjectMatches =
+                    subject.name.contains(
+                        searchText,
+                        ignoreCase = true
+                    )
+
+                val filteredNotes =
+                    subject.notes.filter { note ->
+                        note.title.contains(
+                            searchText,
+                            ignoreCase = true
+                        )
+                    }
+
+                when {
+                    subjectMatches -> subject
+
+                    filteredNotes.isNotEmpty() ->
+                        subject.copy(
+                            notes = filteredNotes
+                        )
+
+                    else -> null
+                }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                MaterialTheme.colorScheme.background
+            )
     ) {
+
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFF7BD5F5))
-                    .padding(vertical = 12.dp),
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 12.dp
+                    )
+                    .clip(
+                        RoundedCornerShape(50.dp)
+                    )
+                    .background(
+                        MaterialTheme.colorScheme.primary
+                    )
+                    .padding(
+                        vertical = 12.dp
+                    ),
                 contentAlignment = Alignment.Center
             ) {
+
                 Text(
                     text = "Notes",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 4.dp
+                    ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.onBackground
+
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = {
+                        searchText = it
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    singleLine = true,
+                    placeholder = {
+                        Text("Search notes...")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search"
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchText.isNotEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    searchText = ""
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear Search"
+                                )
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor =
+                            MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor =
+                            MaterialTheme.colorScheme.outline
+                    )
                 )
+
+                Spacer(
+                    modifier = Modifier.width(10.dp)
+                )
+
                 Button(
-                    onClick = { showCreateSubjectDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7BD5F5))
+                    onClick = {
+                        showCreateSubjectDialog = true
+                    },
+                    modifier = Modifier.height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor =
+                            MaterialTheme.colorScheme.primary,
+                        contentColor =
+                            MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = PaddingValues(
+                        horizontal = 12.dp
+                    )
                 ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Create Subject",
+                        modifier = Modifier.size(18.dp)
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(4.dp)
+                    )
+
                     Text(
                         text = "Create Subject",
-                        color = Color.Black,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 90.dp)
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            if (
+                searchText.isNotBlank() &&
+                filteredSubjects.isEmpty()
             ) {
-                items(subjects) { subject ->
-                    SubjectSection(
-                        subject = subject,
-                        onNoteClick = { note ->
-                            navController.navigate(Screen.NoteView.createRoute(note.id))
-                        },
-                        onDeleteSubject = {
-                            subjectToDelete = subject.name
-                        },
-                        onGenerateFlashcards = {
-                            navController.navigate("flashcards_screen/${subject.name}")
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 50.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+
+                    Column(
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(42.dp),
+                            tint =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(10.dp)
+                        )
+
+                        Text(
+                            text = "No notes found",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Text(
+                            text = "Try another search",
+                            fontSize = 13.sp,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
+                        )
+                    }
+                }
+
+            } else {
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = 4.dp,
+                        bottom = 100.dp
+                    ),
+                    verticalArrangement =
+                        Arrangement.spacedBy(14.dp)
+                ) {
+
+                    items(
+                        items = filteredSubjects,
+                        key = {
+                            it.name
                         }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    ) { subject ->
+
+                        SubjectSection(
+                            subject = subject,
+                            onNoteClick = { note ->
+                                navController.navigate(
+                                    Screen.NoteView.createRoute(
+                                        note.id
+                                    )
+                                )
+                            },
+                            onDeleteSubject = {
+                                subjectToDelete =
+                                    subject.name
+                            },
+                            onGenerateFlashcards = {
+                                navController.navigate(
+                                    "flashcards_screen/${subject.name}"
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
 
         FloatingActionButton(
             onClick = {
+
                 if (subjects.isNotEmpty()) {
-                    navController.navigate(Screen.NoteDetail.route)
+
+                    navController.navigate(
+                        Screen.NoteDetail.route
+                    )
+
                 } else {
-                    android.widget.Toast.makeText(context, "Please create a subject first", android.widget.Toast.LENGTH_SHORT).show()
+
+                    Toast.makeText(
+                        context,
+                        "Please create a subject first",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp),
+                .padding(18.dp),
             shape = CircleShape,
-            containerColor = if (subjects.isNotEmpty()) MaterialTheme.colorScheme.surfaceVariant else Color.Gray,
-            contentColor = if (subjects.isNotEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else Color.LightGray
+            containerColor =
+                if (subjects.isNotEmpty()) {
+                    Color(0xFFFFD166)
+                } else {
+                    Color(0xFFD0D0D0)
+                },
+            contentColor =
+                if (subjects.isNotEmpty()) {
+                    Color(0xFF5A4612)
+                } else {
+                    Color(0xFF888888)
+                }
         ) {
+
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Add Note"
@@ -140,34 +367,70 @@ fun NotesScreen(
     }
 
     if (showCreateSubjectDialog) {
+
         AlertDialog(
-            onDismissRequest = { showCreateSubjectDialog = false },
-            title = { Text("Create New Subject") },
+            onDismissRequest = {
+                showCreateSubjectDialog = false
+            },
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Create New Subject",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
+
                 OutlinedTextField(
                     value = newSubjectName,
-                    onValueChange = { newSubjectName = it },
-                    label = { Text("Subject Name") },
-                    singleLine = true
+                    onValueChange = {
+                        newSubjectName = it
+                    },
+                    label = {
+                        Text("Subject Name")
+                    },
+                    placeholder = {
+                        Text("Enter subject name")
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
                 )
             },
             confirmButton = {
+
                 TextButton(
                     onClick = {
+
                         if (newSubjectName.isNotBlank()) {
-                            viewModel.createSubject(newSubjectName, context)
+
+                            viewModel.createSubject(
+                                newSubjectName,
+                                context
+                            )
+
                             newSubjectName = ""
+
                             showCreateSubjectDialog = false
                         }
                     }
                 ) {
-                    Text("Create")
+
+                    Text(
+                        text = "Create",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
+
                 TextButton(
-                    onClick = { showCreateSubjectDialog = false }
+                    onClick = {
+
+                        showCreateSubjectDialog = false
+                        newSubjectName = ""
+                    }
                 ) {
+
                     Text("Cancel")
                 }
             }
@@ -175,24 +438,56 @@ fun NotesScreen(
     }
 
     if (subjectToDelete != null) {
+
         AlertDialog(
-            onDismissRequest = { subjectToDelete = null },
-            title = { Text("Delete Subject") },
-            text = { Text("Are you sure you want to delete this subject and all its notes? This action cannot be undone.") },
+            onDismissRequest = {
+                subjectToDelete = null
+            },
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Delete Subject",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text =
+                        "Are you sure you want to delete this subject and all its notes? This action cannot be undone."
+                )
+            },
             confirmButton = {
+
                 TextButton(
                     onClick = {
-                        viewModel.deleteSubject(subjectToDelete!!, context)
+
+                        viewModel.deleteSubject(
+                            subjectToDelete!!,
+                            context
+                        )
+
                         subjectToDelete = null
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+
+                    Text(
+                        text = "Delete",
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .error,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
+
                 TextButton(
-                    onClick = { subjectToDelete = null }
+                    onClick = {
+                        subjectToDelete = null
+                    }
                 ) {
+
                     Text("Cancel")
                 }
             }
@@ -207,52 +502,134 @@ fun SubjectSection(
     onDeleteSubject: () -> Unit,
     onGenerateFlashcards: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(
+            containerColor =
+                MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = subject.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground
+
+        Column(
+            modifier = Modifier.padding(
+                vertical = 10.dp
             )
+        ) {
+
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp),
+                verticalAlignment =
+                    Alignment.CenterVertically,
+                horizontalArrangement =
+                    Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onGenerateFlashcards) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Generate Flashcards",
-                        tint = MaterialTheme.colorScheme.primary
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        text = subject.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(2.dp)
+                    )
+
+                    Text(
+                        text =
+                            "${subject.notes.size} notes",
+                        fontSize = 12.sp,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
                     )
                 }
-                IconButton(onClick = onDeleteSubject) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Subject",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    IconButton(
+                        onClick =
+                            onGenerateFlashcards
+                    ) {
+
+                        Icon(
+                            imageVector =
+                                Icons.Default.AutoAwesome,
+                            contentDescription =
+                                "Generate Flashcards",
+                            tint =
+                                Color(0xFF9B7EDE)
+                        )
+                    }
+
+                    IconButton(
+                        onClick =
+                            onDeleteSubject
+                    ) {
+
+                        Icon(
+                            imageVector =
+                                Icons.Default.Delete,
+                            contentDescription =
+                                "Delete Subject",
+                            tint =
+                                MaterialTheme
+                                    .colorScheme
+                                    .error
+                        )
+                    }
                 }
             }
-        }
 
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(subject.notes) { note ->
-                NoteCard(
-                    note = note,
-                    backgroundColor = subject.cardColor,
-                    onCardClick = { onNoteClick(note) }
-                )
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            LazyRow(
+                contentPadding =
+                    PaddingValues(
+                        horizontal = 14.dp
+                    ),
+                horizontalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
+
+                items(
+                    items = subject.notes,
+                    key = {
+                        it.id
+                    }
+                ) { note ->
+
+                    NoteCard(
+                        note = note,
+                        onCardClick = {
+                            onNoteClick(note)
+                        }
+                    )
+                }
             }
         }
     }
@@ -261,30 +638,76 @@ fun SubjectSection(
 @Composable
 fun NoteCard(
     note: Note,
-    backgroundColor: Color,
     onCardClick: () -> Unit
 ) {
+
+    val backgroundColor = remember(
+        note.color
+    ) {
+
+        try {
+            Color(
+                note.color.toColorInt()
+            )
+        } catch (e: Exception) {
+            Color(0xFFFFE5B4)
+        }
+    }
+
     Card(
         modifier = Modifier
-            .width(160.dp)
-            .height(160.dp)
-            .clickable { onCardClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+            .width(158.dp)
+            .height(158.dp)
+            .clickable {
+                onCardClick()
+            },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor =
+                backgroundColor
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
     ) {
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp)
+                .padding(16.dp)
         ) {
+
+            Box(
+                modifier = Modifier
+                    .width(34.dp)
+                    .height(5.dp)
+                    .clip(
+                        RoundedCornerShape(50.dp)
+                    )
+                    .background(
+                        Color.Black.copy(
+                            alpha = 0.12f
+                        )
+                    )
+                    .align(
+                        Alignment.TopStart
+                    )
+            )
+
             Text(
                 text = note.title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                maxLines = 4,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF332E2E),
+                maxLines = 5,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.TopStart)
+                modifier = Modifier
+                    .align(
+                        Alignment.TopStart
+                    )
+                    .padding(
+                        top = 18.dp
+                    )
             )
         }
     }

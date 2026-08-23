@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,68 +36,160 @@ fun FlashcardsScreen(
     val subjects by notesViewModel.subjects.collectAsState()
     val isLoaded by notesViewModel.isLoaded.collectAsState()
 
-    var currentIndex by remember { mutableStateOf(0) }
-    var isAnswerVisible by remember { mutableStateOf(false) }
+    var currentIndex by remember {
+        mutableStateOf(0)
+    }
 
-    val currentUserId = supabase.auth.currentUserOrNull()?.id
+    var isAnswerVisible by remember {
+        mutableStateOf(false)
+    }
+
+    val currentUserId =
+        supabase.auth.currentUserOrNull()?.id
 
     LaunchedEffect(currentUserId) {
         notesViewModel.loadData()
     }
 
-    val currentSubject = remember(subjects, subjectName) {
-        subjects.find { it.name.equals(subjectName.trim(), ignoreCase = true) }
+    val currentSubject = remember(
+        subjects,
+        subjectName
+    ) {
+        subjects.find {
+            it.name.equals(
+                subjectName.trim(),
+                ignoreCase = true
+            )
+        }
     }
 
-    val notes = currentSubject?.notes ?: emptyList()
+    val notes =
+        currentSubject?.notes ?: emptyList()
 
-    LaunchedEffect(isLoaded, currentSubject) {
-        if (isLoaded && currentSubject != null && notes.isNotEmpty()) {
+    LaunchedEffect(
+        isLoaded,
+        currentSubject
+    ) {
+        if (
+            isLoaded &&
+            currentSubject != null &&
+            notes.isNotEmpty()
+        ) {
             currentIndex = 0
             isAnswerVisible = false
-            flashcardsViewModel.generateFlashcards(notes)
+
+            flashcardsViewModel.generateFlashcards(
+                notes
+            )
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                MaterialTheme.colorScheme.background
+            )
     ) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(
+                    horizontal = 10.dp,
+                    vertical = 10.dp
+                )
+                .background(
+                    Color(0xFF7BD5F5),
+                    RoundedCornerShape(20.dp)
+                )
+                .padding(
+                    horizontal = 6.dp,
+                    vertical = 8.dp
+                ),
+
+            verticalAlignment =
+                Alignment.CenterVertically,
+
+            horizontalArrangement =
+                Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { navController.popBackStack() }) {
+
+            Row(
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                IconButton(
+                    onClick = {
+                        navController.popBackStack()
+                    }
+                ) {
+
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onBackground
+                        imageVector =
+                            Icons.AutoMirrored.Filled.ArrowBack,
+
+                        contentDescription =
+                            "Back",
+
+                        tint = Color.Black
                     )
                 }
-                Text(
-                    text = "Flashcards: $subjectName",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
+
+                Column(
+                    modifier =
+                        Modifier.padding(
+                            start = 4.dp
+                        )
+                ) {
+
+                    Text(
+                        text = "Flashcards",
+
+                        fontSize = 13.sp,
+
+                        color =
+                            Color.Black.copy(
+                                alpha = 0.65f
+                            )
+                    )
+
+                    Text(
+                        text = subjectName,
+
+                        fontSize = 19.sp,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        color = Color.Black,
+
+                        maxLines = 1
+                    )
+                }
             }
 
             IconButton(
                 onClick = {
-                    notesViewModel.loadData()
+                    if (!isLoading) {
+                        currentIndex = 0
+                        isAnswerVisible = false
+                        notesViewModel.loadData()
+                    }
                 },
+
                 enabled = !isLoading
             ) {
+
                 Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = MaterialTheme.colorScheme.onBackground
+                    imageVector =
+                        Icons.Default.Refresh,
+
+                    contentDescription =
+                        "Refresh",
+
+                    tint = Color.Black
                 )
             }
         }
@@ -104,135 +197,575 @@ fun FlashcardsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+                .padding(18.dp),
+
+            contentAlignment =
+                Alignment.Center
         ) {
+
             when {
+
                 !isLoaded -> {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Loading subject notes...",
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
+
+                    LoadingContent(
+                        text =
+                            "Loading your notes..."
+                    )
                 }
 
                 isLoading -> {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Gemini is generating flashcards...",
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
+
+                    LoadingContent(
+                        text =
+                            "Generating flashcards..."
+                    )
                 }
 
                 errorMessage != null -> {
-                    Text(
-                        text = errorMessage ?: "Unknown error",
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
+
+                    ErrorContent(
+                        message =
+                            errorMessage
+                                ?: "Something went wrong",
+
+                        onRetry = {
+                            notesViewModel.loadData()
+                        }
                     )
                 }
 
                 notes.isEmpty() -> {
-                    Text(
-                        text = "No notes found in this subject.",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.Center
-                    )
+
+                    EmptyContent()
                 }
 
                 flashcards.isNotEmpty() -> {
-                    val currentCard = flashcards[currentIndex]
+
+                    val currentCard =
+                        flashcards[currentIndex]
 
                     Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.SpaceBetween
+                        modifier =
+                            Modifier.fillMaxSize(),
+
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally
                     ) {
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(8.dp)
+                        )
+
                         Text(
-                            text = "Card ${currentIndex + 1} of ${flashcards.size}",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                            text =
+                                "CARD ${currentIndex + 1} OF ${flashcards.size}",
+
+                            fontSize = 13.sp,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
+                        )
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(10.dp)
+                        )
+
+                        LinearProgressIndicator(
+                            progress = {
+                                (currentIndex + 1).toFloat() /
+                                        flashcards.size.toFloat()
+                            },
+
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(7.dp),
+
+                            color =
+                                Color(0xFF9B7EDE),
+
+                            trackColor =
+                                MaterialTheme
+                                    .colorScheme
+                                    .surfaceVariant
+                        )
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(18.dp)
                         )
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(vertical = 16.dp)
-                                .clickable { isAnswerVisible = !isAnswerVisible },
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable {
+                                    isAnswerVisible =
+                                        !isAnswerVisible
+                                },
+
+                            shape =
+                                RoundedCornerShape(28.dp),
+
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor =
+                                        if (
+                                            isAnswerVisible
+                                        ) {
+                                            MaterialTheme
+                                                .colorScheme
+                                                .secondaryContainer
+                                        } else {
+                                            MaterialTheme
+                                                .colorScheme
+                                                .tertiaryContainer
+                                        }
+                                ),
+
+                            elevation =
+                                CardDefaults.cardElevation(
+                                    defaultElevation =
+                                        5.dp
+                                )
                         ) {
+
                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(24.dp),
-                                contentAlignment = Alignment.Center
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .padding(28.dp),
+
+                                contentAlignment =
+                                    Alignment.Center
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = if (isAnswerVisible) "ANSWER" else "QUESTION",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
+
+                                Column(
+                                    horizontalAlignment =
+                                        Alignment.CenterHorizontally
+                                ) {
+
+                                    Surface(
+                                        shape =
+                                            RoundedCornerShape(
+                                                50.dp
+                                            ),
+
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .surface
+                                                .copy(
+                                                    alpha = 0.7f
+                                                )
+                                    ) {
+
+                                        Row(
+                                            modifier =
+                                                Modifier.padding(
+                                                    horizontal = 14.dp,
+                                                    vertical = 7.dp
+                                                ),
+
+                                            verticalAlignment =
+                                                Alignment.CenterVertically
+                                        ) {
+
+                                            Icon(
+                                                imageVector =
+                                                    Icons.Default.AutoAwesome,
+
+                                                contentDescription =
+                                                    null,
+
+                                                modifier =
+                                                    Modifier.size(
+                                                        16.dp
+                                                    ),
+
+                                                tint =
+                                                    MaterialTheme
+                                                        .colorScheme
+                                                        .primary
+                                            )
+
+                                            Spacer(
+                                                modifier =
+                                                    Modifier.width(
+                                                        6.dp
+                                                    )
+                                            )
+
+                                            Text(
+                                                text =
+                                                    if (
+                                                        isAnswerVisible
+                                                    ) {
+                                                        "ANSWER"
+                                                    } else {
+                                                        "QUESTION"
+                                                    },
+
+                                                fontSize =
+                                                    12.sp,
+
+                                                fontWeight =
+                                                    FontWeight.Bold,
+
+                                                color =
+                                                    MaterialTheme
+                                                        .colorScheme
+                                                        .primary
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(
+                                        modifier =
+                                            Modifier.height(
+                                                28.dp
+                                            )
                                     )
-                                    Spacer(modifier = Modifier.height(16.dp))
+
                                     Text(
-                                        text = if (isAnswerVisible) currentCard.answer else currentCard.question,
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        textAlign = TextAlign.Center,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text =
+                                            if (
+                                                isAnswerVisible
+                                            ) {
+                                                currentCard.answer
+                                            } else {
+                                                currentCard.question
+                                            },
+
+                                        fontSize = 22.sp,
+
+                                        fontWeight =
+                                            FontWeight.SemiBold,
+
+                                        textAlign =
+                                            TextAlign.Center,
+
+                                        lineHeight =
+                                            30.sp,
+
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onSurface
                                     )
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                    Text(
-                                        text = "Tap to flip",
-                                        fontSize = 12.sp,
-                                        color = Color.Gray
+
+                                    Spacer(
+                                        modifier =
+                                            Modifier.height(
+                                                28.dp
+                                            )
                                     )
+
+                                    Surface(
+                                        shape =
+                                            RoundedCornerShape(
+                                                50.dp
+                                            ),
+
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .surface
+                                                .copy(
+                                                    alpha = 0.6f
+                                                )
+                                    ) {
+
+                                        Text(
+                                            text =
+                                                "Tap to flip",
+
+                                            fontSize =
+                                                12.sp,
+
+                                            color =
+                                                MaterialTheme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+
+                                            modifier =
+                                                Modifier.padding(
+                                                    horizontal = 14.dp,
+                                                    vertical = 7.dp
+                                                )
+                                        )
+                                    }
                                 }
                             }
                         }
 
+                        Spacer(
+                            modifier =
+                                Modifier.height(18.dp)
+                        )
+
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            modifier =
+                                Modifier.fillMaxWidth(),
+
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    12.dp
+                                )
                         ) {
-                            Button(
+
+                            OutlinedButton(
                                 onClick = {
-                                    if (currentIndex > 0) {
+
+                                    if (
+                                        currentIndex > 0
+                                    ) {
                                         currentIndex--
-                                        isAnswerVisible = false
+                                        isAnswerVisible =
+                                            false
                                     }
                                 },
-                                enabled = currentIndex > 0
+
+                                enabled =
+                                    currentIndex > 0,
+
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .height(52.dp),
+
+                                shape =
+                                    RoundedCornerShape(
+                                        16.dp
+                                    )
                             ) {
-                                Text("Previous")
+
+                                Text(
+                                    text = "Previous",
+
+                                    fontWeight =
+                                        FontWeight.SemiBold
+                                )
                             }
 
                             Button(
                                 onClick = {
-                                    if (currentIndex < flashcards.size - 1) {
+
+                                    if (
+                                        currentIndex <
+                                        flashcards.size - 1
+                                    ) {
                                         currentIndex++
-                                        isAnswerVisible = false
+                                        isAnswerVisible =
+                                            false
                                     }
                                 },
-                                enabled = currentIndex < flashcards.size - 1
+
+                                enabled =
+                                    currentIndex <
+                                            flashcards.size - 1,
+
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .height(52.dp),
+
+                                shape =
+                                    RoundedCornerShape(
+                                        16.dp
+                                    ),
+
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor =
+                                            Color(0xFF9B7EDE)
+                                    )
                             ) {
-                                Text("Next")
+
+                                Text(
+                                    text = "Next",
+
+                                    fontWeight =
+                                        FontWeight.Bold
+                                )
                             }
                         }
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(8.dp)
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun LoadingContent(
+    text: String
+) {
+
+    Column(
+        horizontalAlignment =
+            Alignment.CenterHorizontally
+    ) {
+
+        CircularProgressIndicator(
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .primary,
+
+            strokeWidth = 4.dp
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(18.dp)
+        )
+
+        Text(
+            text = text,
+
+            fontSize = 16.sp,
+
+            fontWeight =
+                FontWeight.Medium,
+
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onBackground
+        )
+    }
+}
+
+@Composable
+fun ErrorContent(
+    message: String,
+    onRetry: () -> Unit
+) {
+
+    Column(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        horizontalAlignment =
+            Alignment.CenterHorizontally
+    ) {
+
+        Text(
+            text = "Something went wrong",
+
+            fontSize = 20.sp,
+
+            fontWeight =
+                FontWeight.Bold,
+
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onBackground
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(10.dp)
+        )
+
+        Text(
+            text = message,
+
+            fontSize = 14.sp,
+
+            textAlign =
+                TextAlign.Center,
+
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(20.dp)
+        )
+
+        Button(
+            onClick = onRetry,
+
+            shape =
+                RoundedCornerShape(16.dp)
+        ) {
+
+            Icon(
+                imageVector =
+                    Icons.Default.Refresh,
+
+                contentDescription = null
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.width(6.dp)
+            )
+
+            Text(
+                text = "Try Again"
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyContent() {
+
+    Column(
+        horizontalAlignment =
+            Alignment.CenterHorizontally
+    ) {
+
+        Text(
+            text = "No notes found",
+
+            fontSize = 21.sp,
+
+            fontWeight =
+                FontWeight.Bold,
+
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onBackground
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(8.dp)
+        )
+
+        Text(
+            text =
+                "Add some notes to this subject first.",
+
+            fontSize = 14.sp,
+
+            textAlign =
+                TextAlign.Center,
+
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant
+        )
     }
 }
