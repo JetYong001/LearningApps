@@ -20,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.example.project.data.supabase
 import com.example.project.model.PlannerItem
@@ -53,10 +55,11 @@ private data class PlannerReminder(
 fun DashboardScreen(
     navController: NavController,
     viewModel: DashboardViewModel,
-    plannerViewModel: PlannerViewModel = viewModel(),
-    profileViewModel: ProfileViewModel = viewModel()
+    plannerViewModel: PlannerViewModel,
+    profileViewModel: ProfileViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val currentTimeText by viewModel.currentTimeText.collectAsState()
     val plannerItems by plannerViewModel.items.collectAsState()
     val profile by profileViewModel.profile.collectAsState()
 
@@ -76,84 +79,136 @@ fun DashboardScreen(
         mutableStateOf(false)
     }
 
+    var firstResume by remember {
+        mutableStateOf(true)
+    }
+
     val currentUserId =
         supabase.auth.currentUserOrNull()?.id
 
-    LaunchedEffect(Unit) {
-        profileViewModel.loadProfile()
-    }
+    val lifecycleOwner =
+        LocalLifecycleOwner.current
 
-    LaunchedEffect(currentUserId) {
-        plannerViewModel.loadItems()
+    DisposableEffect(
+        lifecycleOwner,
+        currentUserId
+    ) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (
+                    event == Lifecycle.Event.ON_RESUME
+                ) {
+                    if (firstResume) {
+                        firstResume = false
+                    } else {
+                        plannerViewModel
+                            .refreshItemsInBackground()
+
+                        profileViewModel
+                            .refreshProfileInBackground()
+                    }
+                }
+            }
+
+        lifecycleOwner.lifecycle.addObserver(
+            observer
+        )
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(
+                observer
+            )
+        }
     }
 
     val completedItems =
-        plannerItems.filter {
-            it.status.equals(
-                "Completed",
-                ignoreCase = true
-            )
+        remember(plannerItems) {
+            plannerItems.filter {
+                it.status.equals(
+                    "Completed",
+                    ignoreCase = true
+                )
+            }
         }
 
     val remainingItems =
-        plannerItems.filterNot {
-            it.status.equals(
-                "Completed",
-                ignoreCase = true
-            )
+        remember(plannerItems) {
+            plannerItems.filterNot {
+                it.status.equals(
+                    "Completed",
+                    ignoreCase = true
+                )
+            }
         }
 
-    val now = Date().time
-
     val missedItems =
-        remainingItems
-            .filter {
-                dueDateMillis(it.dueAt) <= now
-            }
-            .sortedBy {
-                dueDateMillis(it.dueAt)
-            }
+        remember(remainingItems) {
+            remainingItems
+                .filter {
+                    dueDateMillis(it.dueAt) <=
+                            Date().time
+                }
+                .sortedBy {
+                    dueDateMillis(it.dueAt)
+                }
+        }
 
     val upcomingItems =
-        remainingItems
-            .filter {
-                dueDateMillis(it.dueAt) > now
-            }
-            .sortedBy {
-                dueDateMillis(it.dueAt)
-            }
+        remember(remainingItems) {
+            remainingItems
+                .filter {
+                    dueDateMillis(it.dueAt) >
+                            Date().time
+                }
+                .sortedBy {
+                    dueDateMillis(it.dueAt)
+                }
+        }
 
     val selectedItems =
         when (selectedList) {
-            TaskListType.REMAINING -> remainingItems
-            TaskListType.MISSED -> missedItems
-            TaskListType.COMPLETED -> completedItems
-            null -> emptyList()
+            TaskListType.REMAINING ->
+                remainingItems
+
+            TaskListType.MISSED ->
+                missedItems
+
+            TaskListType.COMPLETED ->
+                completedItems
+
+            null ->
+                emptyList()
         }
 
     val nextItem =
         upcomingItems.firstOrNull()
 
     val reminders =
-        plannerReminders(remainingItems)
+        remember(remainingItems) {
+            plannerReminders(
+                remainingItems
+            )
+        }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        contentPadding = PaddingValues(
-            top = 16.dp,
-            bottom = 24.dp
-        )
+            .padding(
+                horizontal = 16.dp
+            ),
+        verticalArrangement =
+            Arrangement.spacedBy(20.dp),
+        contentPadding =
+            PaddingValues(
+                top = 16.dp,
+                bottom = 24.dp
+            )
     ) {
-
         item {
-
             Box(
-                modifier = Modifier.fillMaxWidth()
+                modifier =
+                    Modifier.fillMaxWidth()
             ) {
-
                 HeaderCard(
                     userName =
                         profile?.username
@@ -164,20 +219,20 @@ fun DashboardScreen(
 
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(
+                            Alignment.TopEnd
+                        )
                         .padding(
                             top = 8.dp,
                             end = 8.dp
                         )
                 ) {
-
                     IconButton(
                         onClick = {
                             showReminders = true
                             notificationsRead = true
                         }
                     ) {
-
                         Icon(
                             imageVector =
                                 Icons.Default.Notifications,
@@ -194,14 +249,16 @@ fun DashboardScreen(
                         reminders.isNotEmpty() &&
                         !notificationsRead
                     ) {
-
                         Badge(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(
-                                    x = (-8).dp,
-                                    y = 8.dp
-                                )
+                            modifier =
+                                Modifier
+                                    .align(
+                                        Alignment.TopEnd
+                                    )
+                                    .offset(
+                                        x = (-8).dp,
+                                        y = 8.dp
+                                    )
                         )
                     }
                 }
@@ -209,7 +266,6 @@ fun DashboardScreen(
         }
 
         item {
-
             ProgressSummaryCard(
                 completedTasks =
                     completedItems.size,
@@ -219,15 +275,15 @@ fun DashboardScreen(
                     nextItem?.title
                         ?: "No tasks left",
                 nextTaskTime =
-                    nextItem
-                        ?.dueAt
-                        ?.substringAfterLast(", ")
+                    nextItem?.dueAt
+                        ?.substringAfterLast(
+                            ", "
+                        )
                         .orEmpty()
             )
         }
 
         item {
-
             DailyMetrics(
                 remainingCount =
                     remainingItems.size,
@@ -251,10 +307,9 @@ fun DashboardScreen(
         }
 
         item {
-
             FocusSessionCard(
                 currentTimeText =
-                    uiState.currentTimeText,
+                    currentTimeText,
                 onStartClick = {
                     navController.navigate(
                         Screen.FocusSession.route
@@ -265,7 +320,6 @@ fun DashboardScreen(
     }
 
     selectedList?.let { type ->
-
         PlannerTitleDialog(
             title = type.title,
             items = selectedItems,
@@ -279,7 +333,6 @@ fun DashboardScreen(
     }
 
     selectedDetail?.let { item ->
-
         PlannerDetailDialog(
             item = item,
             onDismiss = {
@@ -289,7 +342,6 @@ fun DashboardScreen(
     }
 
     if (showReminders) {
-
         ReminderDialog(
             reminders = reminders,
             onDismiss = {
@@ -308,40 +360,43 @@ private fun DailyMetrics(
     onMissedClick: () -> Unit,
     onCompletedClick: () -> Unit
 ) {
-
     val textColor = Color.Black
-    val remainingColor = Color(0xFFA7DFFA)
-    val deadlineColor = Color(0xFFFFA8AC)
-    val completedColor = Color(0xFFA6F7A1)
+    val remainingColor =
+        Color(0xFFA7DFFA)
+    val deadlineColor =
+        Color(0xFFFFA8AC)
+    val completedColor =
+        Color(0xFFA6F7A1)
 
     Column {
-
         Text(
             text = "Task Overview",
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme
-                .colorScheme
-                .onBackground
-                .copy(alpha = 0.7f),
-            modifier = Modifier.padding(
-                bottom = 8.dp
-            )
+            color =
+                MaterialTheme.colorScheme
+                    .onBackground
+                    .copy(alpha = 0.7f),
+            modifier =
+                Modifier.padding(
+                    bottom = 8.dp
+                )
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier.fillMaxWidth(),
             horizontalArrangement =
                 Arrangement.spacedBy(12.dp)
         ) {
-
             MetricCard(
                 label = "Remaining",
                 count = remainingCount,
                 color = remainingColor,
                 contentColor = textColor,
                 onClick = onRemainingClick,
-                modifier = Modifier.weight(1f)
+                modifier =
+                    Modifier.weight(1f)
             )
 
             MetricCard(
@@ -350,7 +405,8 @@ private fun DailyMetrics(
                 color = deadlineColor,
                 contentColor = textColor,
                 onClick = onMissedClick,
-                modifier = Modifier.weight(1f)
+                modifier =
+                    Modifier.weight(1f)
             )
 
             MetricCard(
@@ -359,7 +415,8 @@ private fun DailyMetrics(
                 color = completedColor,
                 contentColor = textColor,
                 onClick = onCompletedClick,
-                modifier = Modifier.weight(1f)
+                modifier =
+                    Modifier.weight(1f)
             )
         }
     }
@@ -374,27 +431,32 @@ private fun MetricCard(
     onClick: () -> Unit,
     modifier: Modifier
 ) {
-
     Card(
-        modifier = modifier
-            .height(150.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color
-        )
+        modifier =
+            modifier
+                .height(150.dp)
+                .clickable(
+                    onClick = onClick
+                ),
+        shape =
+            RoundedCornerShape(20.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = color
+            )
     ) {
-
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        vertical = 16.dp
+                    ),
             horizontalAlignment =
                 Alignment.CenterHorizontally,
             verticalArrangement =
                 Arrangement.SpaceBetween
         ) {
-
             Text(
                 text = count.toString(),
                 fontSize = 52.sp,
@@ -418,7 +480,6 @@ private fun PlannerTitleDialog(
     onDismiss: () -> Unit,
     onItemClick: (PlannerItem) -> Unit
 ) {
-
     val isDarkMode =
         MaterialTheme
             .colorScheme
@@ -445,44 +506,45 @@ private fun PlannerTitleDialog(
     Dialog(
         onDismissRequest = onDismiss
     ) {
-
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape =
+                RoundedCornerShape(24.dp),
             color = dialogColor,
             tonalElevation = 8.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(
-                    min = 360.dp,
-                    max = 540.dp
-                )
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(
+                        min = 360.dp,
+                        max = 540.dp
+                    )
         ) {
-
             Column(
-                modifier = Modifier.padding(18.dp)
+                modifier =
+                    Modifier.padding(18.dp)
             ) {
-
                 Box(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier =
+                        Modifier.fillMaxWidth()
                 ) {
-
                     Text(
                         text = title,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = dialogTextColor,
-                        modifier = Modifier.align(
-                            Alignment.Center
-                        )
+                        modifier =
+                            Modifier.align(
+                                Alignment.Center
+                            )
                     )
 
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.align(
-                            Alignment.CenterEnd
-                        )
+                        modifier =
+                            Modifier.align(
+                                Alignment.CenterEnd
+                            )
                     ) {
-
                         Icon(
                             imageVector =
                                 Icons.Default.Close,
@@ -498,19 +560,19 @@ private fun PlannerTitleDialog(
                 )
 
                 Spacer(
-                    modifier = Modifier.height(16.dp)
+                    modifier =
+                        Modifier.height(16.dp)
                 )
 
                 if (items.isEmpty()) {
-
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                         contentAlignment =
                             Alignment.Center
                     ) {
-
                         Text(
                             text = "No items",
                             color =
@@ -518,57 +580,73 @@ private fun PlannerTitleDialog(
                                     .copy(alpha = 0.65f)
                         )
                     }
-
                 } else {
-
                     LazyColumn(
                         verticalArrangement =
-                            Arrangement.spacedBy(14.dp),
-                        modifier = Modifier.weight(
-                            1f,
-                            fill = false
-                        )
+                            Arrangement.spacedBy(
+                                14.dp
+                            ),
+                        modifier =
+                            Modifier.weight(
+                                1f,
+                                fill = false
+                            )
                     ) {
-
                         items(
                             items,
                             key = { it.id }
                         ) { item ->
-
                             Surface(
                                 color = rowColor,
                                 shape =
-                                    RoundedCornerShape(14.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onItemClick(item)
-                                    }
-                            ) {
-
-                                Row(
-                                    modifier = Modifier.padding(
-                                        horizontal = 16.dp,
-                                        vertical = 17.dp
+                                    RoundedCornerShape(
+                                        14.dp
                                     ),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onItemClick(
+                                                item
+                                            )
+                                        }
+                            ) {
+                                Row(
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal =
+                                                16.dp,
+                                            vertical =
+                                                17.dp
+                                        ),
                                     verticalAlignment =
                                         Alignment.CenterVertically
                                 ) {
-
                                     Text(
-                                        text = item.title,
-                                        color = Color.Black,
-                                        fontSize = 16.sp,
-                                        modifier = Modifier.weight(1f)
+                                        text =
+                                            item.title,
+                                        color =
+                                            Color.Black,
+                                        fontSize =
+                                            16.sp,
+                                        modifier =
+                                            Modifier.weight(
+                                                1f
+                                            )
                                     )
 
                                     Icon(
                                         imageVector =
-                                            Icons.Default.ArrowForwardIos,
-                                        contentDescription = null,
-                                        tint = Color.Black,
+                                            Icons.Default
+                                                .ArrowForwardIos,
+                                        contentDescription =
+                                            null,
+                                        tint =
+                                            Color.Black,
                                         modifier =
-                                            Modifier.size(18.dp)
+                                            Modifier.size(
+                                                18.dp
+                                            )
                                     )
                                 }
                             }
@@ -585,7 +663,6 @@ private fun PlannerDetailDialog(
     item: PlannerItem,
     onDismiss: () -> Unit
 ) {
-
     val isDarkMode =
         MaterialTheme
             .colorScheme
@@ -612,44 +689,49 @@ private fun PlannerDetailDialog(
     Dialog(
         onDismissRequest = onDismiss
     ) {
-
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape =
+                RoundedCornerShape(24.dp),
             color = dialogColor,
             tonalElevation = 8.dp,
-            modifier = Modifier.fillMaxWidth()
+            modifier =
+                Modifier.fillMaxWidth()
         ) {
-
             Column(
-                modifier = Modifier.padding(20.dp)
+                modifier =
+                    Modifier.padding(20.dp)
             ) {
-
                 Box(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier =
+                        Modifier.fillMaxWidth()
                 ) {
-
                     Text(
                         text =
-                            if (item.itemType == "project") {
+                            if (
+                                item.itemType ==
+                                "project"
+                            ) {
                                 "Project details"
                             } else {
                                 "Task details"
                             },
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight =
+                            FontWeight.Bold,
                         color = textColor,
-                        modifier = Modifier.align(
-                            Alignment.CenterStart
-                        )
+                        modifier =
+                            Modifier.align(
+                                Alignment.CenterStart
+                            )
                     )
 
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.align(
-                            Alignment.CenterEnd
-                        )
+                        modifier =
+                            Modifier.align(
+                                Alignment.CenterEnd
+                            )
                     ) {
-
                         Icon(
                             imageVector =
                                 Icons.Default.Close,
@@ -661,21 +743,23 @@ private fun PlannerDetailDialog(
                 }
 
                 Spacer(
-                    modifier = Modifier.height(12.dp)
+                    modifier =
+                        Modifier.height(12.dp)
                 )
 
                 Surface(
                     color = detailColor,
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    shape =
+                        RoundedCornerShape(18.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
                 ) {
-
                     Column(
-                        modifier = Modifier.padding(18.dp),
+                        modifier =
+                            Modifier.padding(18.dp),
                         verticalArrangement =
                             Arrangement.spacedBy(8.dp)
                     ) {
-
                         DetailLine(
                             label = "Title",
                             value = item.title,
@@ -685,9 +769,10 @@ private fun PlannerDetailDialog(
                         DetailLine(
                             label = "Description",
                             value =
-                                item.description.ifBlank {
-                                    "—"
-                                },
+                                item.description
+                                    .ifBlank {
+                                        "—"
+                                    },
                             textColor = Color.Black
                         )
 
@@ -715,15 +800,14 @@ private fun DetailLine(
     value: String,
     textColor: Color
 ) {
-
     Column(
         verticalArrangement =
             Arrangement.spacedBy(2.dp)
     ) {
-
         Text(
             text = "$label:",
-            fontWeight = FontWeight.Bold,
+            fontWeight =
+                FontWeight.Bold,
             color = textColor
         )
 
@@ -739,7 +823,6 @@ private fun ReminderDialog(
     reminders: List<PlannerReminder>,
     onDismiss: () -> Unit
 ) {
-
     val isDarkMode =
         MaterialTheme
             .colorScheme
@@ -763,137 +846,150 @@ private fun ReminderDialog(
     Dialog(
         onDismissRequest = onDismiss
     ) {
-
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape =
+                RoundedCornerShape(24.dp),
             color = dialogColor,
             tonalElevation = 8.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(
-                    min = 300.dp,
-                    max = 540.dp
-                )
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(
+                        min = 300.dp,
+                        max = 540.dp
+                    )
         ) {
-
             Column(
-                modifier = Modifier.padding(18.dp)
+                modifier =
+                    Modifier.padding(18.dp)
             ) {
-
                 Box(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier =
+                        Modifier.fillMaxWidth()
                 ) {
-
                     Text(
-                        text = "Deadline reminders",
+                        text =
+                            "Deadline reminders",
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = dialogTextColor,
-                        modifier = Modifier.align(
-                            Alignment.CenterStart
-                        )
+                        fontWeight =
+                            FontWeight.Bold,
+                        color =
+                            dialogTextColor,
+                        modifier =
+                            Modifier.align(
+                                Alignment.CenterStart
+                            )
                     )
 
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.align(
-                            Alignment.CenterEnd
-                        )
+                        modifier =
+                            Modifier.align(
+                                Alignment.CenterEnd
+                            )
                     ) {
-
                         Icon(
                             imageVector =
                                 Icons.Default.Close,
                             contentDescription =
                                 "Close",
-                            tint = dialogTextColor
+                            tint =
+                                dialogTextColor
                         )
                     }
                 }
 
                 HorizontalDivider(
-                    color = dialogTextColor
+                    color =
+                        dialogTextColor
                 )
 
                 Spacer(
-                    modifier = Modifier.height(14.dp)
+                    modifier =
+                        Modifier.height(14.dp)
                 )
 
                 if (reminders.isEmpty()) {
-
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                         contentAlignment =
                             Alignment.Center
                     ) {
-
                         Text(
                             text =
                                 "No upcoming reminders",
                             color =
                                 dialogTextColor
-                                    .copy(alpha = 0.65f)
+                                    .copy(
+                                        alpha = 0.65f
+                                    )
                         )
                     }
-
                 } else {
-
                     LazyColumn(
                         verticalArrangement =
-                            Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(
-                            1f,
-                            fill = false
-                        )
+                            Arrangement.spacedBy(
+                                10.dp
+                            )
                     ) {
-
                         items(
-                            reminders,
-                            key = {
-                                it.item.id
-                            }
+                            reminders
                         ) { reminder ->
-
-                            Surface(
-                                color =
-                                    Color(0xFFA7DFFA),
+                            Card(
                                 shape =
-                                    RoundedCornerShape(14.dp),
+                                    RoundedCornerShape(
+                                        12.dp
+                                    ),
+                                colors =
+                                    CardDefaults
+                                        .cardColors(
+                                            containerColor =
+                                                MaterialTheme
+                                                    .colorScheme
+                                                    .surfaceVariant
+                                        ),
                                 modifier =
                                     Modifier.fillMaxWidth()
                             ) {
-
                                 Column(
                                     modifier =
-                                        Modifier.padding(16.dp),
-                                    verticalArrangement =
-                                        Arrangement.spacedBy(4.dp)
+                                        Modifier.padding(
+                                            12.dp
+                                        )
                                 ) {
-
                                     Text(
                                         text =
-                                            reminder.item.title,
-                                        color = Color.Black,
+                                            reminder
+                                                .item
+                                                .title,
                                         fontWeight =
-                                            FontWeight.Bold
+                                            FontWeight.Bold,
+                                        fontSize =
+                                            15.sp,
+                                        color =
+                                            dialogTextColor
                                     )
 
-                                    Text(
-                                        text =
-                                            "Deadline: ${reminder.item.dueAt}",
-                                        color = Color.Black
+                                    Spacer(
+                                        modifier =
+                                            Modifier.height(
+                                                4.dp
+                                            )
                                     )
 
                                     Text(
                                         text =
                                             reminder.message,
+                                        fontSize =
+                                            13.sp,
                                         color =
-                                            Color.Black.copy(
-                                                alpha = 0.7f
-                                            ),
-                                        fontSize = 13.sp
+                                            dialogTextColor
+                                                .copy(
+                                                    alpha = 0.8f
+                                                )
                                     )
                                 }
                             }
@@ -905,82 +1001,54 @@ private fun ReminderDialog(
     }
 }
 
+private fun dueDateMillis(
+    dueAt: String
+): Long {
+    return try {
+        val sdf =
+            SimpleDateFormat(
+                "yyyy-MM-dd HH:mm",
+                Locale.getDefault()
+            )
+
+        sdf.parse(dueAt)?.time
+            ?: Long.MAX_VALUE
+
+    } catch (e: Exception) {
+        Long.MAX_VALUE
+    }
+}
+
 private fun plannerReminders(
     items: List<PlannerItem>
 ): List<PlannerReminder> {
+    val now =
+        Date().time
 
-    val now = Date().time
+    return items.mapNotNull { item ->
+        val due =
+            dueDateMillis(item.dueAt)
 
-    val hourMillis =
-        60L * 60L * 1000L
+        val diff =
+            due - now
 
-    val dayMillis =
-        24L * hourMillis
+        if (
+            diff in 0..(24 * 3600 * 1000)
+        ) {
+            val hours =
+                diff / (3600 * 1000)
 
-    return items
-        .mapNotNull { item ->
-
-            val due =
-                dueDateMillis(item.dueAt)
-
-            val remaining =
-                due - now
-
-            when {
-
-                item.itemType == "task" &&
-                        remaining in 0..(2 * hourMillis) -> {
-
-                    PlannerReminder(
-                        item,
-                        "Due within 2 hours"
-                    )
-                }
-
-                item.itemType == "project" &&
-                        remaining in 0..(3 * dayMillis) -> {
-
-                    PlannerReminder(
-                        item,
-                        "Due within 3 days"
-                    )
-                }
-
-                item.itemType == "project" &&
-                        remaining in 0..(7 * dayMillis) -> {
-
-                    PlannerReminder(
-                        item,
-                        "Due within 7 days"
-                    )
-                }
-
-                else -> null
-            }
+            PlannerReminder(
+                item,
+                "Due in $hours hour(s)"
+            )
+        } else if (diff < 0) {
+            PlannerReminder(
+                item,
+                "Overdue"
+            )
+        } else {
+            null
         }
-        .sortedBy {
-            dueDateMillis(it.item.dueAt)
-        }
-}
-
-private fun dueDateMillis(
-    value: String
-): Long {
-
-    return try {
-
-        SimpleDateFormat(
-            "dd MMMM yyyy, HH:mm",
-            Locale.getDefault()
-        )
-            .parse(value)
-            ?.time
-            ?: Long.MAX_VALUE
-
-    } catch (
-        e: Exception
-    ) {
-
-        Long.MAX_VALUE
     }
 }

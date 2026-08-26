@@ -6,40 +6,36 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.project.viewmodel.ProfileViewModel
 
 @Composable
 fun EditProfileScreen(
     navController: NavController,
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel
 ) {
-
     val profile by viewModel.profile.collectAsState()
     val isUpdating by viewModel.isUpdating.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    var validationError by remember {
+        mutableStateOf<String?>(null)
+    }
 
     var username by remember {
         mutableStateOf("")
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadProfile()
-    }
-
-    LaunchedEffect(profile) {
-
-        profile?.let {
-
-            if (username.isEmpty()) {
-                username = it.username
-            }
+    LaunchedEffect(profile?.username) {
+        profile?.username?.let {
+            username = it
         }
     }
 
@@ -58,11 +54,20 @@ fun EditProfileScreen(
     val onSurfaceVariant =
         MaterialTheme.colorScheme.onSurfaceVariant
 
+    val onPrimary =
+        MaterialTheme.colorScheme.onPrimary
+
+    val outline =
+        MaterialTheme.colorScheme.outline
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(background)
-            .padding(16.dp)
+            .padding(
+                horizontal = 20.dp,
+                vertical = 14.dp
+            )
     ) {
 
         Row(
@@ -70,69 +75,90 @@ fun EditProfileScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            IconButton(
-                onClick = {
-                    navController.popBackStack()
-                }
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = surface
             ) {
 
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = onSurface
-                )
+                IconButton(
+                    onClick = {
+                        navController.popBackStack()
+                    }
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = onSurface
+                    )
+                }
             }
 
             Spacer(
-                modifier = Modifier.width(4.dp)
+                modifier = Modifier.width(14.dp)
             )
 
-            Text(
-                text = "Edit Username",
-                style = MaterialTheme.typography.titleLarge,
-                color = onSurface
-            )
+            Column {
+
+                Text(
+                    text = "Edit Profile",
+                    fontSize = 23.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = onSurface
+                )
+
+                Text(
+                    text = "Update your personal information",
+                    fontSize = 12.sp,
+                    color = onSurfaceVariant
+                )
+            }
         }
 
         Spacer(
-            modifier = Modifier.height(30.dp)
+            modifier = Modifier.height(32.dp)
         )
 
-        Box(
+        Surface(
             modifier = Modifier
-                .size(70.dp)
-                .background(
-                    primary.copy(alpha = 0.12f),
-                    RoundedCornerShape(20.dp)
-                ),
-            contentAlignment = Alignment.Center
+                .size(82.dp)
+                .align(Alignment.CenterHorizontally),
+            shape = RoundedCornerShape(24.dp),
+            color = primary.copy(alpha = 0.12f)
         ) {
 
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-                tint = primary,
-                modifier = Modifier.size(36.dp)
-            )
+            Box(
+                contentAlignment = Alignment.Center
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = primary,
+                    modifier = Modifier.size(42.dp)
+                )
+            }
         }
 
         Spacer(
-            modifier = Modifier.height(20.dp)
+            modifier = Modifier.height(22.dp)
         )
 
         Text(
             text = "Change your username",
-            style = MaterialTheme.typography.headlineSmall,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
             color = onSurface
         )
 
         Spacer(
-            modifier = Modifier.height(6.dp)
+            modifier = Modifier.height(7.dp)
         )
 
         Text(
-            text = "Your username will be displayed across the app.",
-            style = MaterialTheme.typography.bodyMedium,
+            text = "Your username is shown throughout the app.",
+            fontSize = 14.sp,
             color = onSurfaceVariant
         )
 
@@ -140,31 +166,26 @@ fun EditProfileScreen(
             modifier = Modifier.height(24.dp)
         )
 
-        Card(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = surface
-            ),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 2.dp
-            )
+            color = surface,
+            tonalElevation = 2.dp
         ) {
 
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
+                modifier = Modifier.padding(20.dp)
             ) {
 
                 Text(
                     text = "Username",
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = onSurface
                 )
 
                 Spacer(
-                    modifier = Modifier.height(12.dp)
+                    modifier = Modifier.height(10.dp)
                 )
 
                 OutlinedTextField(
@@ -180,13 +201,52 @@ fun EditProfileScreen(
                         Text("Enter username")
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = primary,
+                            focusedLabelColor = primary,
+                            cursorColor = primary,
+                            unfocusedBorderColor = outline
+                        )
+                )
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                Text(
+                    text = "${username.length} characters",
+                    fontSize = 11.sp,
+                    color = onSurfaceVariant,
+                    modifier = Modifier.align(
+                        Alignment.End
+                    )
                 )
             }
         }
 
         Spacer(
-            modifier = Modifier.height(24.dp)
+            modifier = Modifier.height(18.dp)
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = primary.copy(alpha = 0.08f)
+        ) {
+
+            Text(
+                text =
+                    "Use at least 3 characters for your username.",
+                modifier = Modifier.padding(14.dp),
+                fontSize = 12.sp,
+                color = onSurfaceVariant
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.weight(1f)
         )
 
         Button(
@@ -198,51 +258,26 @@ fun EditProfileScreen(
                 when {
 
                     cleanUsername.isEmpty() -> {
-
-                        viewModel.clearError()
-
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle
-                            ?.set(
-                                "edit_error",
-                                "Username cannot be empty"
-                            )
+                        validationError =
+                            "Username cannot be empty"
                     }
 
                     cleanUsername.length < 3 -> {
-
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle
-                            ?.set(
-                                "edit_error",
-                                "Username must be at least 3 characters"
-                            )
+                        validationError =
+                            "Username must be at least 3 characters"
                     }
 
                     cleanUsername == profile?.username -> {
-
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle
-                            ?.set(
-                                "edit_error",
-                                "Please enter a different username"
-                            )
+                        validationError =
+                            "Please enter a different username"
                     }
 
                     else -> {
+                        validationError = null
 
                         viewModel.updateUsername(
                             username = cleanUsername,
                             onSuccess = {
-
-                                navController
-                                    .previousBackStackEntry
-                                    ?.savedStateHandle
-                                    ?.set(
-                                        "username_updated",
-                                        true
-                                    )
-
                                 navController.popBackStack()
                             }
                         )
@@ -251,37 +286,60 @@ fun EditProfileScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(58.dp),
             enabled = !isUpdating,
             shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = primary
-            )
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = primary,
+                    contentColor = onPrimary
+                )
         ) {
 
             if (isUpdating) {
 
                 CircularProgressIndicator(
                     modifier = Modifier.size(22.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp
+                    color = onPrimary,
+                    strokeWidth = 2.5.dp
                 )
 
             } else {
 
-                Text("Save Changes")
+                Icon(
+                    imageVector = Icons.Default.Save,
+                    contentDescription = null
+                )
+
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
+
+                Text(
+                    text = "Save Changes",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
             }
         }
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
     }
 
-    errorMessage?.let { message ->
+    validationError?.let { message ->
 
         AlertDialog(
             onDismissRequest = {
-                viewModel.clearError()
+                validationError = null
             },
+            shape = RoundedCornerShape(24.dp),
             title = {
-                Text("Update Failed")
+                Text(
+                    text = "Invalid Username",
+                    fontWeight = FontWeight.Bold
+                )
             },
             text = {
                 Text(message)
@@ -289,7 +347,7 @@ fun EditProfileScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.clearError()
+                        validationError = null
                     }
                 ) {
                     Text("OK")

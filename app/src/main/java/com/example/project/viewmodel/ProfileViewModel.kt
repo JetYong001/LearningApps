@@ -9,10 +9,12 @@ import com.example.project.model.Profile
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ProfileViewModel : ViewModel() {
 
@@ -34,71 +36,26 @@ class ProfileViewModel : ViewModel() {
     val errorMessage: StateFlow<String?> =
         _errorMessage.asStateFlow()
 
-    fun clearError() {
-        _errorMessage.value = null
-    }
+    private var loadedUserId: String? = null
 
-    fun loadProfile() {
-        viewModelScope.launch {
-            try {
-                val userId =
-                    supabase.auth
-                        .currentUserOrNull()
-                        ?.id
-                        ?: return@launch
-
-                val result =
-                    supabase
-                        .from("profiles")
-                        .select {
-                            filter {
-                                eq("id", userId)
-                            }
-                        }
-                        .decodeSingle<Profile>()
-
-                _profile.value = result
-
-            } catch (e: Exception) {
-                _errorMessage.value =
-                    e.message
-                        ?: "Failed to load profile"
-            }
-        }
-    }
-
-    fun updateUsername(
-        username: String,
-        onSuccess: () -> Unit
+    suspend fun loadProfileAwait(
+        forceRefresh: Boolean = false
     ) {
-        viewModelScope.launch {
-            try {
-                val userId =
-                    supabase.auth
-                        .currentUserOrNull()
-                        ?.id
-                        ?: return@launch
+        val userId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
 
-                _isUpdating.value = true
-                _errorMessage.value = null
+        if (
+            !forceRefresh &&
+            loadedUserId == userId &&
+            _profile.value != null
+        ) {
+            return
+        }
 
-                supabase
-                    .from("profiles")
-                    .update({
-                        set(
-                            "username",
-                            username
-                        )
-                    }) {
-                        filter {
-                            eq(
-                                "id",
-                                userId
-                            )
-                        }
-                    }
-
-                val updatedProfile =
+        try {
+            val profile =
+                withContext(Dispatchers.IO) {
                     supabase
                         .from("profiles")
                         .select {
@@ -110,16 +67,100 @@ class ProfileViewModel : ViewModel() {
                             }
                         }
                         .decodeSingle<Profile>()
+                }
 
-                _profile.value = updatedProfile
+            _profile.value = profile
+            loadedUserId = userId
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+
+            _errorMessage.value =
+                e.message
+                    ?: "Failed to load profile"
+        }
+    }
+
+    fun loadProfile(
+        forceRefresh: Boolean = false
+    ) {
+        viewModelScope.launch {
+            loadProfileAwait(
+                forceRefresh = forceRefresh
+            )
+        }
+    }
+
+    fun refreshProfileInBackground() {
+        viewModelScope.launch {
+            loadProfileAwait(
+                forceRefresh = true
+            )
+        }
+    }
+
+    fun updateUsername(
+        username: String,
+        onSuccess: () -> Unit
+    ) {
+        val userId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
+
+        val oldProfile =
+            _profile.value
+
+        val updatedProfile =
+            oldProfile?.copy(
+                username = username
+            )
+
+        _profile.value =
+            updatedProfile
+
+        viewModelScope.launch {
+
+            _isUpdating.value = true
+            _errorMessage.value = null
+
+            try {
+
+                withContext(Dispatchers.IO) {
+                    supabase
+                        .from("profiles")
+                        .update(
+                            {
+                                set(
+                                    "username",
+                                    username
+                                )
+                            }
+                        ) {
+                            filter {
+                                eq(
+                                    "id",
+                                    userId
+                                )
+                            }
+                        }
+                }
+
+                loadedUserId =
+                    userId
 
                 onSuccess()
 
             } catch (e: Exception) {
+
+                _profile.value =
+                    oldProfile
+
                 _errorMessage.value =
                     e.message
                         ?: "Failed to update username"
+
             } finally {
+
                 _isUpdating.value = false
             }
         }
@@ -129,75 +170,68 @@ class ProfileViewModel : ViewModel() {
         context: Context,
         imageUri: Uri
     ) {
+        val userId =
+            supabase.auth.currentUserOrNull()?.id
+                ?: return
+
         viewModelScope.launch {
+
+            _isUpdating.value = true
+            _errorMessage.value = null
+
             try {
-                val userId =
-                    supabase.auth
-                        .currentUserOrNull()
-                        ?.id
-                        ?: return@launch
-
-                _isUpdating.value = true
-                _errorMessage.value = null
-
-                val inputStream =
-                    context.contentResolver
-                        .openInputStream(imageUri)
-
-                if (inputStream == null) {
-                    _errorMessage.value =
-                        "Unable to open selected image"
-
-                    return@launch
-                }
 
                 val imageBytes =
-                    inputStream.use {
-                        it.readBytes()
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver
+                            .openInputStream(imageUri)
+                            ?.use {
+                                it.readBytes()
+                            }
+                            ?: throw Exception(
+                                "Unable to open selected image"
+                            )
                     }
 
                 val filePath =
                     "$userId/avatar.jpg"
 
-                supabase
-                    .storage
-                    .from("profile-pictures")
-                    .upload(
-                        path = filePath,
-                        data = imageBytes
-                    ) {
-                        upsert = true
-                    }
-
-                val baseUrl =
+                withContext(Dispatchers.IO) {
                     supabase
                         .storage
                         .from("profile-pictures")
-                        .publicUrl(filePath)
+                        .upload(
+                            path = filePath,
+                            data = imageBytes
+                        ) {
+                            upsert = true
+                        }
+                }
+
+                val baseUrl =
+                    withContext(Dispatchers.IO) {
+                        supabase
+                            .storage
+                            .from("profile-pictures")
+                            .publicUrl(
+                                filePath
+                            )
+                    }
 
                 val profilePictureUrl =
                     "$baseUrl?v=${System.currentTimeMillis()}"
 
-                supabase
-                    .from("profiles")
-                    .update({
-                        set(
-                            "profile_picture",
-                            profilePictureUrl
-                        )
-                    }) {
-                        filter {
-                            eq(
-                                "id",
-                                userId
-                            )
-                        }
-                    }
-
-                val updatedProfile =
+                withContext(Dispatchers.IO) {
                     supabase
                         .from("profiles")
-                        .select {
+                        .update(
+                            {
+                                set(
+                                    "profile_picture",
+                                    profilePictureUrl
+                                )
+                            }
+                        ) {
                             filter {
                                 eq(
                                     "id",
@@ -205,17 +239,36 @@ class ProfileViewModel : ViewModel() {
                                 )
                             }
                         }
-                        .decodeSingle<Profile>()
+                }
 
-                _profile.value = updatedProfile
+                _profile.value =
+                    _profile.value?.copy(
+                        profile_picture =
+                            profilePictureUrl
+                    )
+
+                loadedUserId =
+                    userId
 
             } catch (e: Exception) {
+
                 _errorMessage.value =
                     e.message
                         ?: "Failed to update profile picture"
+
             } finally {
+
                 _isUpdating.value = false
             }
         }
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+    fun clearProfile() {
+        _profile.value = null
+        loadedUserId = null
     }
 }

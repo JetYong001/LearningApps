@@ -1,11 +1,13 @@
 package com.example.project.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.project.model.Note
 import com.example.project.navigation.Screen
 import com.example.project.viewmodel.NotesViewModel
 
@@ -25,25 +26,30 @@ fun NoteViewScreen(
     viewModel: NotesViewModel,
     noteId: String
 ) {
-    var note by remember {
-        mutableStateOf<Note?>(null)
+    val notes by viewModel.notes.collectAsState()
+
+    val note = notes.find {
+        it.id == noteId
     }
 
-    LaunchedEffect(noteId) {
-        note = viewModel.getNoteById(noteId)
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 10.dp
+                ),
+            verticalAlignment = Alignment.CenterVertically
         ) {
 
             IconButton(
@@ -57,18 +63,34 @@ fun NoteViewScreen(
                 )
             }
 
-            Text(
-                text = "Note Details",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+            Spacer(
+                modifier = Modifier.weight(1f)
             )
 
             IconButton(
                 onClick = {
-                    navController.navigate(
-                        Screen.NoteDetail.createRoute(noteId)
-                    )
-                }
+                    if (note != null) {
+                        showDeleteDialog = true
+                    }
+                },
+                enabled = note != null
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Delete Note",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    if (note != null) {
+                        navController.navigate(
+                            Screen.NoteDetail.createRoute(noteId)
+                        )
+                    }
+                },
+                enabled = note != null
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
@@ -77,14 +99,10 @@ fun NoteViewScreen(
             }
         }
 
-        Spacer(
-            modifier = Modifier.height(28.dp)
-        )
-
         if (note == null) {
 
             Box(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -95,51 +113,117 @@ fun NoteViewScreen(
 
         } else {
 
-            Text(
-                text = note!!.title,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 38.sp
-            )
-
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
-
-            Surface(
-                shape = RoundedCornerShape(50.dp),
-                color = MaterialTheme.colorScheme.primaryContainer
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        horizontal = 28.dp,
+                        vertical = 20.dp
+                    )
             ) {
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = note.subjectName,
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = 6.dp
+                        ),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.height(18.dp)
+                )
+
                 Text(
-                    text = note!!.subjectName,
-                    modifier = Modifier.padding(
-                        horizontal = 16.dp,
-                        vertical = 8.dp
-                    ),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    text = note.title,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 42.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Spacer(
+                    modifier = Modifier.height(28.dp)
+                )
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                Spacer(
+                    modifier = Modifier.height(28.dp)
+                )
+
+                Text(
+                    text = note.content.ifBlank {
+                        "No content"
+                    },
+                    fontSize = 17.sp,
+                    lineHeight = 29.sp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(
+                        alpha = 0.82f
+                    )
+                )
+
+                Spacer(
+                    modifier = Modifier.height(40.dp)
                 )
             }
-
-            Spacer(
-                modifier = Modifier.height(24.dp)
-            )
-
-            HorizontalDivider()
-
-            Spacer(
-                modifier = Modifier.height(24.dp)
-            )
-
-            Text(
-                text = note!!.content.ifBlank {
-                    "No content"
-                },
-                fontSize = 16.sp,
-                lineHeight = 26.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
+    }
+
+    if (showDeleteDialog && note != null) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            title = {
+                Text(
+                    text = "Delete Note?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete this note?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+
+                        viewModel.deleteNote(
+                            noteId = noteId
+                        )
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

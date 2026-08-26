@@ -6,14 +6,23 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class StudySession(
     @SerialName("id")
-    val id: String = "",
+    val id: String? = null,
 
     @SerialName("user_id")
     val userId: String = "",
 
-    @SerialName("duration_minutes")
-    val durationMinutes: Int = 0,
+    @SerialName("duration_seconds")
+    val durationSeconds: Int = 0,
 
     @SerialName("created_at")
-    val createdAt: String = ""
+    val createdAt: String? = null
+)
+
+@Serializable
+data class StudySessionInsert(
+    @SerialName("user_id")
+    val userId: String,
+
+    @SerialName("duration_seconds")
+    val durationSeconds: Int
 )

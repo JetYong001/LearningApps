@@ -1,6 +1,5 @@
 package com.example.project.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,9 +30,12 @@ fun NoteDetailScreen(
 
     val subjects by viewModel.subjects.collectAsState()
 
+    val isNewNote =
+        noteId.isNullOrBlank() || noteId == "new"
+
     LaunchedEffect(noteId) {
-        if (!noteId.isNullOrBlank() && noteId != "new") {
-            val note = viewModel.getNoteById(noteId)
+        if (!isNewNote) {
+            val note = viewModel.getNoteById(noteId!!)
 
             if (note != null) {
                 title = note.title
@@ -44,14 +45,14 @@ fun NoteDetailScreen(
         }
     }
 
-    val isNewNote = noteId.isNullOrBlank() || noteId == "new"
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(
+                horizontal = 20.dp,
+                vertical = 12.dp
+            )
     ) {
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -59,7 +60,6 @@ fun NoteDetailScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-
             IconButton(
                 onClick = {
                     navController.popBackStack()
@@ -188,7 +188,6 @@ fun NoteDetailScreen(
                 }
             }
         ) {
-
             TextField(
                 value = subject,
                 onValueChange = {},
@@ -232,7 +231,6 @@ fun NoteDetailScreen(
                 }
             ) {
                 subjects.forEach { subjectItem ->
-
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -271,8 +269,7 @@ fun NoteDetailScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .clip(RoundedCornerShape(16.dp)),
+                .weight(1f),
             placeholder = {
                 Text(
                     text = "Write your note here...",
@@ -296,7 +293,8 @@ fun NoteDetailScreen(
                 unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(
                     alpha = 0f
                 )
-            )
+            ),
+            shape = RoundedCornerShape(16.dp)
         )
 
         Spacer(

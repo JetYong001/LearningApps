@@ -30,7 +30,6 @@ class ChangePasswordViewModel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
 
     fun loadCurrentEmail() {
-
         email =
             supabase.auth
                 .currentUserOrNull()
@@ -55,10 +54,8 @@ class ChangePasswordViewModel : ViewModel() {
             currentEmail.isEmpty() ||
             !currentEmail.contains("@")
         ) {
-
             errorMessage =
-                "Unable to find a valid email address"
-
+                "Please enter a valid email address."
             return
         }
 
@@ -70,7 +67,6 @@ class ChangePasswordViewModel : ViewModel() {
             try {
 
                 supabase.auth.signInWith(OTP) {
-
                     email = currentEmail
                 }
 
@@ -79,8 +75,10 @@ class ChangePasswordViewModel : ViewModel() {
             } catch (e: Exception) {
 
                 errorMessage =
-                    e.message
-                        ?: "Failed to send OTP"
+                    getFriendlyError(
+                        e,
+                        "Unable to send verification code."
+                    )
 
             } finally {
 
@@ -96,9 +94,7 @@ class ChangePasswordViewModel : ViewModel() {
             otpCooldown = 60
 
             while (otpCooldown > 0) {
-
                 delay(1000)
-
                 otpCooldown--
             }
         }
@@ -116,18 +112,20 @@ class ChangePasswordViewModel : ViewModel() {
             currentEmail.isEmpty() ||
             !currentEmail.contains("@")
         ) {
-
             errorMessage =
-                "Invalid email address"
-
+                "Please enter a valid email address."
             return
         }
 
         if (currentOtp.isEmpty()) {
-
             errorMessage =
-                "Please enter the OTP code"
+                "Please enter the verification code."
+            return
+        }
 
+        if (currentOtp.length != 6) {
+            errorMessage =
+                "The verification code must contain 6 digits."
             return
         }
 
@@ -145,12 +143,15 @@ class ChangePasswordViewModel : ViewModel() {
                 )
 
                 otpVerified = true
+                otpCode = ""
 
             } catch (e: Exception) {
 
                 errorMessage =
-                    e.message
-                        ?: "Invalid OTP code"
+                    getFriendlyError(
+                        e,
+                        "Invalid verification code."
+                    )
 
             } finally {
 
@@ -164,26 +165,32 @@ class ChangePasswordViewModel : ViewModel() {
     ) {
 
         if (!otpVerified) {
-
             errorMessage =
-                "Please verify the OTP first"
+                "Please verify your email first."
+            return
+        }
 
+        if (newPassword.isBlank()) {
+            errorMessage =
+                "Please enter a new password."
             return
         }
 
         if (newPassword.length < 6) {
-
             errorMessage =
-                "Password must be at least 6 characters"
+                "Password must be at least 6 characters."
+            return
+        }
 
+        if (confirmPassword.isBlank()) {
+            errorMessage =
+                "Please confirm your new password."
             return
         }
 
         if (newPassword != confirmPassword) {
-
             errorMessage =
-                "Passwords do not match"
-
+                "Passwords do not match."
             return
         }
 
@@ -195,7 +202,6 @@ class ChangePasswordViewModel : ViewModel() {
             try {
 
                 supabase.auth.updateUser {
-
                     password = newPassword
                 }
 
@@ -209,13 +215,83 @@ class ChangePasswordViewModel : ViewModel() {
             } catch (e: Exception) {
 
                 errorMessage =
-                    e.message
-                        ?: "Failed to change password"
+                    getFriendlyError(
+                        e,
+                        "Unable to update your password."
+                    )
 
             } finally {
 
                 isChangingPassword = false
             }
+        }
+    }
+
+    private fun getFriendlyError(
+        exception: Exception,
+        defaultMessage: String
+    ): String {
+
+        val message =
+            exception.message
+                ?.lowercase()
+                .orEmpty()
+
+        return when {
+
+            "expired" in message &&
+                    ("otp" in message ||
+                            "token" in message ||
+                            "code" in message) ->
+                "This verification code has expired. Please request a new one."
+
+            "invalid" in message &&
+                    ("otp" in message ||
+                            "token" in message ||
+                            "code" in message) ->
+                "The verification code is incorrect."
+
+            "otp" in message &&
+                    ("too many" in message ||
+                            "rate" in message ||
+                            "limit" in message) ->
+                "Too many attempts. Please try again later."
+
+            "email" in message &&
+                    ("not found" in message ||
+                            "not exist" in message) ->
+                "This email address could not be found."
+
+            "password" in message &&
+                    ("weak" in message ||
+                            "short" in message ||
+                            "length" in message) ->
+                "Your password is too weak. Please use a stronger password."
+
+            "password" in message &&
+                    ("same" in message ||
+                            "current" in message) ->
+                "Please choose a different password."
+
+            "network" in message ||
+                    "timeout" in message ||
+                    "connection" in message ->
+                "Network error. Please check your internet connection."
+
+            "rate limit" in message ||
+                    "too many requests" in message ->
+                "Too many requests. Please try again later."
+
+            "already registered" in message ->
+                "This account is already registered."
+
+            "not authorized" in message ||
+                    "unauthorized" in message ||
+                    "forbidden" in message ->
+                "You are not authorized to perform this action."
+
+            else ->
+                defaultMessage
         }
     }
 }

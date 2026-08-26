@@ -3,8 +3,8 @@ package com.example.project.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.project.model.Note
-import com.google.firebase.ai.ai
 import com.google.firebase.Firebase
+import com.google.firebase.ai.ai
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,62 +20,167 @@ class FlashcardsViewModel : ViewModel() {
         modelName = "gemini-3.6-flash"
     )
 
-    private val _flashcards = MutableStateFlow<List<Flashcard>>(emptyList())
-    val flashcards: StateFlow<List<Flashcard>> = _flashcards
+    private val _flashcards =
+        MutableStateFlow<List<Flashcard>>(emptyList())
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val flashcards: StateFlow<List<Flashcard>> =
+        _flashcards
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    private val _isLoading =
+        MutableStateFlow(false)
 
-    fun generateFlashcards(notes: List<Note>) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
+    val isLoading: StateFlow<Boolean> =
+        _isLoading
+
+    private val _errorMessage =
+        MutableStateFlow<String?>(null)
+
+    val errorMessage: StateFlow<String?> =
+        _errorMessage
+
+    private var lastNotesKey: String? = null
+
+    private var generationId = 0
+
+    fun generateFlashcards(
+        notes: List<Note>,
+        forceRefresh: Boolean = false
+    ) {
+
+        if (notes.isEmpty()) {
+
             _flashcards.value = emptyList()
 
-            if (notes.isEmpty()) {
-                _errorMessage.value = "No notes found in this subject."
-                _isLoading.value = false
-                return@launch
-            }
+            _errorMessage.value =
+                "No notes found in this subject."
 
-            val notesContent = notes.joinToString("\n\n") { "Title: ${it.title}\nContent: ${it.content}" }
+            return
+        }
 
-            val prompt = """
-                Based on the following study notes, generate a list of flashcards (questions and concise answers) to help test understanding.
-                Format each flashcard strictly as follows:
-                Question | Answer
-                
-                Do not include any bullet points, numbering, or additional text outside of this pattern.
-                
-                Notes:
-                $notesContent
-            """.trimIndent()
+        val notesKey =
+            notes
+                .sortedBy { it.id }
+                .joinToString("|") {
+                    "${it.id}:${it.title}:${it.content}"
+                }
+
+        if (
+            !forceRefresh &&
+            notesKey == lastNotesKey &&
+            _flashcards.value.isNotEmpty()
+        ) {
+            return
+        }
+
+        if (_isLoading.value) {
+            return
+        }
+
+        generationId++
+
+        val currentGeneration =
+            generationId
+
+        viewModelScope.launch {
+
+            _isLoading.value = true
+            _errorMessage.value = null
 
             try {
-                val response = generativeModel.generateContent(prompt)
-                val responseText = response.text ?: ""
 
-                val parsedCards = responseText.lines().mapNotNull { line ->
-                    val parts = line.split("|")
-                    if (parts.size == 2) {
-                        Flashcard(question = parts[0].trim(), answer = parts[1].trim())
-                    } else {
-                        null
-                    }
+                val notesContent =
+                    notes
+                        .take(5)
+                        .joinToString("\n\n") {
+                            "Title: ${it.title}\nContent: ${it.content.take(1500)}"
+                        }
+
+                val prompt = """
+                    Create 5 flashcards from these notes.
+                    Use the same language as the notes.
+                    Format: Question | Answer
+                    No numbering or extra text.
+                    
+                    $notesContent
+                    """.trimIndent()
+                val response =
+                    generativeModel.generateContent(prompt)
+
+                if (currentGeneration != generationId) {
+                    return@launch
                 }
+
+                val responseText =
+                    response.text
+                        ?.trim()
+                        ?: ""
+
+                val parsedCards =
+                    responseText
+                        .lines()
+                        .mapNotNull { line ->
+
+                            val cleanLine =
+                                line
+                                    .trim()
+                                    .removePrefix("- ")
+                                    .removePrefix("* ")
+
+                            val parts =
+                                cleanLine.split(
+                                    "|",
+                                    limit = 2
+                                )
+
+                            if (
+                                parts.size == 2 &&
+                                parts[0].isNotBlank() &&
+                                parts[1].isNotBlank()
+                            ) {
+
+                                Flashcard(
+                                    question =
+                                        parts[0].trim(),
+
+                                    answer =
+                                        parts[1].trim()
+                                )
+
+                            } else {
+                                null
+                            }
+                        }
+                        .take(5)
 
                 if (parsedCards.isNotEmpty()) {
-                    _flashcards.value = parsedCards
+
+                    _flashcards.value =
+                        parsedCards
+
+                    lastNotesKey =
+                        notesKey
+
                 } else {
-                    _errorMessage.value = "Failed to parse questions from response."
+
+                    _errorMessage.value =
+                        "Unable to create flashcards. Please try again."
                 }
+
             } catch (e: Exception) {
-                _errorMessage.value = "Error generating content: ${e.localizedMessage}"
+
+                if (currentGeneration == generationId) {
+
+                    _errorMessage.value =
+                        e.localizedMessage
+                            ?: "Unable to generate flashcards."
+                }
+
             } finally {
-                _isLoading.value = false
+
+                if (currentGeneration == generationId) {
+
+                    _isLoading.value = false
+                }
             }
         }
     }

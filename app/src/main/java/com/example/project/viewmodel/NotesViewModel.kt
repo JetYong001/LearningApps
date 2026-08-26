@@ -39,9 +39,7 @@ data class SubjectUiModel(
     val cardColor: Color
         get() {
             return try {
-                Color(
-                    colorHex.toColorInt()
-                )
+                Color(colorHex.toColorInt())
             } catch (e: Exception) {
                 Color(0xFF7BD5F5)
             }
@@ -65,90 +63,31 @@ class NotesViewModel : ViewModel() {
         "#E3F0D5"
     )
 
-    private val _notes =
-        MutableStateFlow<List<Note>>(emptyList())
+    private val _notes = MutableStateFlow<List<Note>>(emptyList())
+    val notes: StateFlow<List<Note>> = _notes.asStateFlow()
 
-    val notes: StateFlow<List<Note>> =
-        _notes.asStateFlow()
+    private val _subjects = MutableStateFlow<List<SubjectUiModel>>(emptyList())
+    val subjects: StateFlow<List<SubjectUiModel>> = _subjects.asStateFlow()
 
-    private val _subjects =
-        MutableStateFlow<List<SubjectUiModel>>(emptyList())
+    private val _isLoaded = MutableStateFlow(false)
+    val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
 
-    val subjects: StateFlow<List<SubjectUiModel>> =
-        _subjects.asStateFlow()
+    init {
+        loadData()
+    }
 
-    private val _isLoaded =
-        MutableStateFlow(false)
-
-    val isLoaded: StateFlow<Boolean> =
-        _isLoaded.asStateFlow()
-
-    fun loadData(
-        context: Context? = null
-    ) {
-        val currentUserId =
-            supabase.auth.currentUserOrNull()?.id
-                ?: return
+    fun loadData(context: Context? = null) {
+        val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-
-            _isLoaded.value = false
-
             try {
-
-                val fetchedNotes =
-                    supabase
-                        .from("notes")
-                        .select {
-                            filter {
-                                eq(
-                                    "user_id",
-                                    currentUserId
-                                )
-                            }
-                        }
-                        .decodeList<Note>()
-
-                val fetchedSubjects =
-                    supabase
-                        .from("subject_categories")
-                        .select {
-                            filter {
-                                eq(
-                                    "user_id",
-                                    currentUserId
-                                )
-                            }
-                        }
-                        .decodeList<SubjectCategoryRow>()
-
-                _notes.value = fetchedNotes
-
-                val subjectList =
-                    fetchedSubjects.map { subject ->
-
-                        SubjectUiModel(
-                            name = subject.name,
-                            colorHex = subject.colorHex,
-                            notes = fetchedNotes.filter { note ->
-                                note.subjectName.equals(
-                                    subject.name,
-                                    ignoreCase = true
-                                )
-                            }
-                        )
-                    }
-
-                _subjects.value = subjectList
-
+                _isLoaded.value = false
+                refreshData(currentUserId)
             } catch (e: Exception) {
-
                 e.printStackTrace()
 
                 context?.let {
-
                     withContext(Dispatchers.Main) {
-
                         Toast.makeText(
                             it,
                             "Unable to load notes: ${e.localizedMessage}",
@@ -156,18 +95,52 @@ class NotesViewModel : ViewModel() {
                         ).show()
                     }
                 }
-
             } finally {
-
                 _isLoaded.value = true
             }
         }
     }
 
-    fun getNoteById(
-        noteId: String
-    ): Note? {
+    private suspend fun refreshData(userId: String) {
+        val fetchedNotes =
+            supabase
+                .from("notes")
+                .select {
+                    filter {
+                        eq("user_id", userId)
+                    }
+                }
+                .decodeList<Note>()
 
+        val fetchedSubjects =
+            supabase
+                .from("subject_categories")
+                .select {
+                    filter {
+                        eq("user_id", userId)
+                    }
+                }
+                .decodeList<SubjectCategoryRow>()
+
+        val subjectList =
+            fetchedSubjects.map { subject ->
+                SubjectUiModel(
+                    name = subject.name,
+                    colorHex = subject.colorHex,
+                    notes = fetchedNotes.filter { note ->
+                        note.subjectName.equals(
+                            subject.name,
+                            ignoreCase = true
+                        )
+                    }
+                )
+            }
+
+        _notes.value = fetchedNotes
+        _subjects.value = subjectList
+    }
+
+    fun getNoteById(noteId: String): Note? {
         return _notes.value.find {
             it.id == noteId
         }
@@ -180,27 +153,23 @@ class NotesViewModel : ViewModel() {
         content: String,
         onSuccess: (() -> Unit)? = null
     ) {
-
         val currentUserId =
             supabase.auth.currentUserOrNull()?.id
                 ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-
             try {
 
-                if (
-                    noteId.isNullOrBlank() ||
-                    noteId == "new"
-                ) {
+                if (noteId.isNullOrBlank() || noteId == "new") {
 
-                    val newNote = Note(
-                        title = title.trim(),
-                        content = content,
-                        subjectName = subjectName.trim(),
-                        userId = currentUserId,
-                        color = noteColors.random()
-                    )
+                    val newNote =
+                        Note(
+                            title = title.trim(),
+                            content = content,
+                            subjectName = subjectName.trim(),
+                            userId = currentUserId,
+                            color = noteColors.random()
+                        )
 
                     supabase
                         .from("notes")
@@ -217,42 +186,33 @@ class NotesViewModel : ViewModel() {
                         existingNote?.color
                             ?: noteColors.random()
 
-                    val updatedNote = Note(
-                        id = noteId,
-                        title = title.trim(),
-                        content = content,
-                        subjectName = subjectName.trim(),
-                        userId = currentUserId,
-                        color = noteColor
-                    )
+                    val updatedNote =
+                        Note(
+                            id = noteId,
+                            title = title.trim(),
+                            content = content,
+                            subjectName = subjectName.trim(),
+                            userId = currentUserId,
+                            color = noteColor
+                        )
 
                     supabase
                         .from("notes")
                         .update(updatedNote) {
-
                             filter {
-
-                                eq(
-                                    "id",
-                                    noteId
-                                )
-
-                                eq(
-                                    "user_id",
-                                    currentUserId
-                                )
+                                eq("id", noteId)
+                                eq("user_id", currentUserId)
                             }
                         }
                 }
 
-                loadData()
+                refreshData(currentUserId)
 
                 withContext(Dispatchers.Main) {
                     onSuccess?.invoke()
                 }
 
             } catch (e: Exception) {
-
                 e.printStackTrace()
             }
         }
@@ -260,45 +220,36 @@ class NotesViewModel : ViewModel() {
 
     fun deleteNote(
         noteId: String,
-        context: Context? = null
+        context: Context? = null,
+        onSuccess: (() -> Unit)? = null
     ) {
-
         val currentUserId =
             supabase.auth.currentUserOrNull()?.id
                 ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-
             try {
 
                 supabase
                     .from("notes")
                     .delete {
-
                         filter {
-
-                            eq(
-                                "id",
-                                noteId
-                            )
-
-                            eq(
-                                "user_id",
-                                currentUserId
-                            )
+                            eq("id", noteId)
+                            eq("user_id", currentUserId)
                         }
                     }
 
-                loadData(context)
+                refreshData(currentUserId)
+
+                withContext(Dispatchers.Main) {
+                    onSuccess?.invoke()
+                }
 
             } catch (e: Exception) {
-
                 e.printStackTrace()
 
                 context?.let {
-
                     withContext(Dispatchers.Main) {
-
                         Toast.makeText(
                             it,
                             "Unable to delete note: ${e.localizedMessage}",
@@ -315,37 +266,34 @@ class NotesViewModel : ViewModel() {
         context: Context? = null,
         colorHex: String = "#7BD5F5"
     ) {
-
         val currentUserId =
             supabase.auth.currentUserOrNull()?.id
                 ?: return
 
-        val cleanName =
-            name.trim()
+        val cleanName = name.trim()
 
         if (cleanName.isBlank()) {
             return
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-
             try {
 
-                val alreadyExists =
-                    _subjects.value.any {
+                val existing =
+                    supabase
+                        .from("subject_categories")
+                        .select {
+                            filter {
+                                eq("user_id", currentUserId)
+                                ilike("name", cleanName)
+                            }
+                        }
+                        .decodeList<SubjectCategoryRow>()
 
-                        it.name.equals(
-                            cleanName,
-                            ignoreCase = true
-                        )
-                    }
-
-                if (alreadyExists) {
+                if (existing.isNotEmpty()) {
 
                     context?.let {
-
                         withContext(Dispatchers.Main) {
-
                             Toast.makeText(
                                 it,
                                 "Subject already exists",
@@ -368,16 +316,14 @@ class NotesViewModel : ViewModel() {
                     .from("subject_categories")
                     .insert(newSubject)
 
-                loadData(context)
+                refreshData(currentUserId)
 
             } catch (e: Exception) {
 
                 e.printStackTrace()
 
                 context?.let {
-
                     withContext(Dispatchers.Main) {
-
                         Toast.makeText(
                             it,
                             "Unable to create subject: ${e.localizedMessage}",
@@ -393,61 +339,39 @@ class NotesViewModel : ViewModel() {
         subjectName: String,
         context: Context? = null
     ) {
-
         val currentUserId =
             supabase.auth.currentUserOrNull()?.id
                 ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-
             try {
 
                 supabase
                     .from("notes")
                     .delete {
-
                         filter {
-
-                            eq(
-                                "subject_name",
-                                subjectName
-                            )
-
-                            eq(
-                                "user_id",
-                                currentUserId
-                            )
+                            eq("subject_name", subjectName)
+                            eq("user_id", currentUserId)
                         }
                     }
 
                 supabase
                     .from("subject_categories")
                     .delete {
-
                         filter {
-
-                            eq(
-                                "name",
-                                subjectName
-                            )
-
-                            eq(
-                                "user_id",
-                                currentUserId
-                            )
+                            eq("name", subjectName)
+                            eq("user_id", currentUserId)
                         }
                     }
 
-                loadData(context)
+                refreshData(currentUserId)
 
             } catch (e: Exception) {
 
                 e.printStackTrace()
 
                 context?.let {
-
                     withContext(Dispatchers.Main) {
-
                         Toast.makeText(
                             it,
                             "Unable to delete subject: ${e.localizedMessage}",
@@ -460,13 +384,8 @@ class NotesViewModel : ViewModel() {
     }
 
     fun getSubjectNames(): List<String> {
-
         return _subjects.value
-            .map {
-                it.name
-            }
-            .filter {
-                it.isNotBlank()
-            }
+            .map { it.name }
+            .filter { it.isNotBlank() }
     }
 }

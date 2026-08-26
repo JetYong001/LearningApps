@@ -1,54 +1,86 @@
 package com.example.project.ui.screens
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.example.project.navigation.Screen
 import com.example.project.ui.components.HeaderCard
 import com.example.project.ui.components.ProgressRing
+import com.example.project.ui.components.StudyConsistencyCard
 import com.example.project.viewmodel.ProfileViewModel
 import com.example.project.viewmodel.ProgressViewModel
-import java.time.DayOfWeek
-import java.time.LocalDate
 
-@SuppressLint("DefaultLocale")
 @Composable
 fun ProgressScreen(
     navController: NavController,
-    viewModel: ProgressViewModel = viewModel(),
-    profileViewModel: ProfileViewModel = viewModel()
+    viewModel: ProgressViewModel,
+    profileViewModel: ProfileViewModel
 ) {
-
     val uiState by viewModel.uiState.collectAsState()
-
     val profile by profileViewModel.profile.collectAsState()
 
-    LaunchedEffect(Unit) {
-        profileViewModel.loadProfile()
+    var showStreakInfo by remember {
+        mutableStateOf(false)
     }
 
-    val primary =
-        MaterialTheme.colorScheme.primary
+    val lifecycleOwner =
+        LocalLifecycleOwner.current
 
-    val onPrimary =
-        MaterialTheme.colorScheme.onPrimary
+    var firstResume by remember {
+        mutableStateOf(true)
+    }
+
+    DisposableEffect(lifecycleOwner) {
+
+        val observer =
+            LifecycleEventObserver { _, event ->
+
+                if (
+                    event == Lifecycle.Event.ON_RESUME
+                ) {
+
+                    if (firstResume) {
+
+                        firstResume = false
+
+                        profileViewModel.loadProfile()
+
+                        viewModel.loadProgressData(
+                            forceRefresh = true
+                        )
+
+                    } else {
+
+                        profileViewModel
+                            .refreshProfileInBackground()
+
+                        viewModel
+                            .refreshProgressInBackground()
+                    }
+                }
+            }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val background =
         MaterialTheme.colorScheme.background
@@ -56,461 +88,421 @@ fun ProgressScreen(
     val surface =
         MaterialTheme.colorScheme.surface
 
-    val surfaceVariant =
-        MaterialTheme.colorScheme.surfaceVariant
-
     val onSurface =
         MaterialTheme.colorScheme.onSurface
 
     val onSurfaceVariant =
         MaterialTheme.colorScheme.onSurfaceVariant
 
-    val days = listOf(
-        "Sun",
-        "Mon",
-        "Tue",
-        "Wed",
-        "Thu",
-        "Fri",
-        "Sat"
-    )
+    val onPrimary =
+        MaterialTheme.colorScheme.onPrimary
 
-    val currentDayIndex =
-        when (LocalDate.now().dayOfWeek) {
-
-            DayOfWeek.SUNDAY -> 0
-
-            else ->
-                LocalDate
-                    .now()
-                    .dayOfWeek
-                    .value
-        }
-
-    val maxHours =
-        uiState.weeklyStudyHours
-            .maxOrNull()
-            ?.coerceAtLeast(4f)
-            ?: 4f
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(background)
-            .padding(
-                horizontal = 16.dp,
-                vertical = 12.dp
-            ),
+    LazyColumn(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(background),
         verticalArrangement =
-            Arrangement.spacedBy(16.dp)
+            Arrangement.spacedBy(14.dp),
+        contentPadding =
+            PaddingValues(
+                horizontal = 16.dp,
+                vertical = 10.dp
+            )
     ) {
 
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        item {
 
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-
-                        navController.navigate(
-                            Screen.Profile.route
-                        )
-                    }
+                modifier =
+                    Modifier.fillMaxWidth()
             ) {
 
-                HeaderCard(
-                    userName =
-                        profile?.username
-                            ?: uiState.userName,
-                    profilePicture =
-                        profile?.profile_picture
-                )
-            }
-
-            IconButton(
-                onClick = {
-
-                    navController.navigate(
-                        Screen.Settings.route
-                    )
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(
-                        top = 6.dp,
-                        end = 6.dp
-                    )
-            ) {
-
-                Icon(
-                    imageVector =
-                        Icons.Default.Settings,
-                    contentDescription =
-                        "Settings",
-                    tint = onPrimary
-                )
-            }
-        }
-
-        Text(
-            text = "Your Progress",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = onSurface
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement =
-                Arrangement.spacedBy(12.dp)
-        ) {
-
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(185.dp),
-                shape =
-                    RoundedCornerShape(24.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = surface
-                    ),
-                elevation =
-                    CardDefaults.cardElevation(
-                        defaultElevation = 2.dp
-                    )
-            ) {
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                navController.navigate(
+                                    Screen.Profile.route
+                                )
+                            }
                 ) {
 
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.SpaceBetween,
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
+                    HeaderCard(
+                        userName =
+                            profile
+                                ?.username
+                                ?.takeIf {
+                                    it.isNotBlank()
+                                }
+                                ?: uiState.userName,
 
-                        Text(
-                            text = "Overall",
-                            fontSize = 14.sp,
-                            fontWeight =
-                                FontWeight.SemiBold,
-                            color = onSurface
-                        )
-
-                        Text(
-                            text =
-                                "${(uiState.overallProgress * 100).toInt()}%",
-                            fontSize = 13.sp,
-                            fontWeight =
-                                FontWeight.Bold,
-                            color = primary
-                        )
-                    }
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(12.dp)
+                        profilePicture =
+                            profile?.profile_picture
                     )
+                }
 
-                    ProgressRing(
-                        progress =
-                            uiState.overallProgress,
-                        size = 105.dp,
-                        strokeWidth = 13.dp,
-                        activeColor = primary,
-                        trackColor =
-                            surfaceVariant
+                IconButton(
+                    onClick = {
+                        navController.navigate(
+                            Screen.Settings.route
+                        )
+                    },
+                    modifier =
+                        Modifier
+                            .align(
+                                Alignment.TopEnd
+                            )
+                            .padding(
+                                top = 6.dp,
+                                end = 6.dp
+                            )
+                ) {
+
+                    Icon(
+                        imageVector =
+                            Icons.Default.Settings,
+                        contentDescription =
+                            "Settings",
+                        tint =
+                            onPrimary
                     )
                 }
             }
+        }
 
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(185.dp),
-                shape =
-                    RoundedCornerShape(24.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = primary
-                    ),
-                elevation =
-                    CardDefaults.cardElevation(
-                        defaultElevation = 2.dp
-                    )
-            ) {
+        item {
+
+            Text(
+                text = "Your Progress",
+                fontSize = 22.sp,
+                fontWeight =
+                    FontWeight.Bold,
+                color =
+                    onSurface
+            )
+        }
+
+        item {
+
+            OverallCard(
+                progress =
+                    uiState.overallProgress,
+                surface =
+                    surface,
+                onSurface =
+                    onSurface,
+                onSurfaceVariant =
+                    onSurfaceVariant
+            )
+        }
+
+        item {
+
+            StudyStreakCard(
+                streak =
+                    uiState.studyStreak,
+                surface =
+                    surface,
+                onSurface =
+                    onSurface,
+                onSurfaceVariant =
+                    onSurfaceVariant,
+                onClick = {
+                    showStreakInfo = true
+                }
+            )
+        }
+
+        item {
+
+            Text(
+                text = "Study Consistency",
+                fontSize = 18.sp,
+                fontWeight =
+                    FontWeight.Bold,
+                color =
+                    onSurface
+            )
+        }
+
+        item {
+
+            StudyConsistencyCard(
+                sessions =
+                    uiState.studySessions,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(430.dp)
+            )
+        }
+    }
+
+    if (showStreakInfo) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showStreakInfo = false
+            },
+            shape =
+                RoundedCornerShape(24.dp),
+            title = {
+
+                Text(
+                    text = "Study Streak",
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            },
+            text = {
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally
+                    verticalArrangement =
+                        Arrangement.spacedBy(10.dp)
                 ) {
 
                     Text(
-                        text = "Study Streak",
-                        fontSize = 14.sp,
-                        fontWeight =
-                            FontWeight.SemiBold,
-                        color = onPrimary
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.weight(1f)
-                    )
-
-                    Text(
-                        text = "🔥",
-                        fontSize = 34.sp
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(2.dp)
+                        text =
+                            "Your study streak increases when you study for at least 5 minutes in a day."
                     )
 
                     Text(
                         text =
-                            "${uiState.studyStreak}",
-                        fontSize = 42.sp,
-                        fontWeight =
-                            FontWeight.ExtraBold,
-                        color = onPrimary
+                            "4 minutes → does not count\n" +
+                                    "5 minutes → counts as 1 day\n" +
+                                    "30 minutes → counts as 1 day"
                     )
 
                     Text(
-                        text = "days",
-                        fontSize = 12.sp,
-                        color =
-                            onPrimary.copy(
-                                alpha = 0.75f
-                            )
+                        text =
+                            "Study at least 5 minutes each day to keep your streak going."
                     )
+                }
+            },
+            confirmButton = {
 
-                    Spacer(
-                        modifier =
-                            Modifier.weight(1f)
-                    )
+                TextButton(
+                    onClick = {
+                        showStreakInfo = false
+                    }
+                ) {
+                    Text("Got it")
                 }
             }
-        }
+        )
+    }
+}
 
-        Card(
-            modifier = Modifier
+@Composable
+private fun OverallCard(
+    progress: Float,
+    surface: androidx.compose.ui.graphics.Color,
+    onSurface: androidx.compose.ui.graphics.Color,
+    onSurfaceVariant: androidx.compose.ui.graphics.Color
+) {
+    val percentage =
+        (progress.coerceIn(0f, 1f) * 100).toInt()
+
+    Card(
+        modifier =
+            Modifier
                 .fillMaxWidth()
-                .height(285.dp),
-            shape =
-                RoundedCornerShape(24.dp),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = surface
-                ),
-            elevation =
-                CardDefaults.cardElevation(
-                    defaultElevation = 2.dp
-                )
+                .height(145.dp),
+        shape =
+            RoundedCornerShape(26.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    surface
+            ),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 3.dp
+            )
+    ) {
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = 18.dp,
+                        vertical = 12.dp
+                    ),
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(18.dp)
+            Box(
+                modifier =
+                    Modifier.size(116.dp),
+                contentAlignment =
+                    Alignment.Center
             ) {
 
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    horizontalArrangement =
-                        Arrangement.SpaceBetween,
-                    verticalAlignment =
-                        Alignment.CenterVertically
-                ) {
+                ProgressRing(
+                    progress =
+                        progress,
+                    size =
+                        102.dp,
+                    strokeWidth =
+                        11.dp
+                )
+            }
 
-                    Column {
+            Spacer(
+                modifier =
+                    Modifier.width(18.dp)
+            )
 
-                        Text(
-                            text =
-                                "Study Consistency",
-                            fontSize = 16.sp,
-                            fontWeight =
-                                FontWeight.Bold,
-                            color = onSurface
-                        )
+            Column(
+                modifier =
+                    Modifier.weight(1f)
+            ) {
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(3.dp)
-                        )
-
-                        Text(
-                            text =
-                                "Weekly activity",
-                            fontSize = 12.sp,
-                            color =
-                                onSurfaceVariant
-                        )
-                    }
-
-                    Surface(
-                        shape =
-                            RoundedCornerShape(12.dp),
-                        color =
-                            primary.copy(
-                                alpha = 0.12f
-                            )
-                    ) {
-
-                        Text(
-                            text =
-                                uiState.todayStudyTime,
-                            modifier =
-                                Modifier.padding(
-                                    horizontal = 10.dp,
-                                    vertical = 7.dp
-                                ),
-                            fontSize = 12.sp,
-                            fontWeight =
-                                FontWeight.Bold,
-                            color = primary
-                        )
-                    }
-                }
+                Text(
+                    text =
+                        "Overall Progress",
+                    fontSize = 13.sp,
+                    fontWeight =
+                        FontWeight.SemiBold,
+                    color =
+                        onSurfaceVariant
+                )
 
                 Spacer(
                     modifier =
-                        Modifier.height(20.dp)
+                        Modifier.height(2.dp)
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    horizontalArrangement =
-                        Arrangement.SpaceEvenly,
-                    verticalAlignment =
-                        Alignment.Bottom
-                ) {
+                Text(
+                    text =
+                        "$percentage%",
+                    fontSize = 32.sp,
+                    fontWeight =
+                        FontWeight.ExtraBold,
+                    color =
+                        onSurface
+                )
 
-                    uiState.weeklyStudyHours
-                        .forEachIndexed { index, hours ->
+                Spacer(
+                    modifier =
+                        Modifier.height(2.dp)
+                )
 
-                            val heightFraction =
-                                if (maxHours > 0f) {
-                                    hours / maxHours
-                                } else {
-                                    0f
-                                }
-
-                            val isToday =
-                                index ==
-                                        currentDayIndex
-
-                            val hasStudy =
-                                hours > 0f
-
-                            Column(
-                                modifier =
-                                    Modifier.fillMaxHeight(),
-                                horizontalAlignment =
-                                    Alignment.CenterHorizontally,
-                                verticalArrangement =
-                                    Arrangement.Bottom
-                            ) {
-
-                                if (hasStudy) {
-
-                                    Text(
-                                        text =
-                                            String.format(
-                                                "%.1fh",
-                                                hours
-                                            ),
-                                        fontSize = 9.sp,
-                                        fontWeight =
-                                            FontWeight.SemiBold,
-                                        color = primary
-                                    )
-
-                                    Spacer(
-                                        modifier =
-                                            Modifier.height(5.dp)
-                                    )
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .width(26.dp)
-                                        .fillMaxHeight(
-                                            if (hasStudy) {
-
-                                                (
-                                                        heightFraction *
-                                                                0.72f
-                                                        )
-                                                    .coerceIn(
-                                                        0.04f,
-                                                        0.72f
-                                                    )
-
-                                            } else {
-
-                                                0.04f
-                                            }
-                                        )
-                                        .clip(
-                                            RoundedCornerShape(
-                                                topStart = 8.dp,
-                                                topEnd = 8.dp
-                                            )
-                                        )
-                                        .background(
-                                            if (hasStudy) {
-                                                primary
-                                            } else {
-                                                surfaceVariant
-                                            }
-                                        )
-                                )
-
-                                Spacer(
-                                    modifier =
-                                        Modifier.height(7.dp)
-                                )
-
-                                Text(
-                                    text =
-                                        days[index],
-                                    fontSize = 10.sp,
-                                    fontWeight =
-                                        if (isToday) {
-                                            FontWeight.Bold
-                                        } else {
-                                            FontWeight.Normal
-                                        },
-                                    color =
-                                        if (isToday) {
-                                            primary
-                                        } else {
-                                            onSurfaceVariant
-                                        }
-                                )
-                            }
-                        }
-                }
+                Text(
+                    text =
+                        progressMessage(
+                            percentage
+                        ),
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color =
+                        onSurfaceVariant
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun StudyStreakCard(
+    streak: Int,
+    surface: androidx.compose.ui.graphics.Color,
+    onSurface: androidx.compose.ui.graphics.Color,
+    onSurfaceVariant: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(86.dp)
+                .clickable(
+                    onClick = onClick
+                ),
+        shape =
+            RoundedCornerShape(22.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    surface
+            ),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 2.dp
+            )
+    ) {
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = 18.dp
+                    ),
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Text(
+                text = "🔥",
+                fontSize = 34.sp
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.width(12.dp)
+            )
+
+            Text(
+                text =
+                    "$streak",
+                fontSize = 34.sp,
+                fontWeight =
+                    FontWeight.ExtraBold,
+                color =
+                    onSurface
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.width(7.dp)
+            )
+
+            Text(
+                text = "days",
+                fontSize = 12.sp,
+                color =
+                    onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun progressMessage(
+    percentage: Int
+): String {
+    return when {
+
+        percentage >= 100 ->
+            "Excellent! All tasks are completed."
+
+        percentage >= 75 ->
+            "Great progress. You're almost there."
+
+        percentage >= 50 ->
+            "Nice work. Keep the momentum going."
+
+        percentage >= 25 ->
+            "Good start. Keep building your progress."
+
+        percentage > 0 ->
+            "Every completed task moves you forward."
+
+        else ->
+            "Complete your first task to start your progress."
     }
 }

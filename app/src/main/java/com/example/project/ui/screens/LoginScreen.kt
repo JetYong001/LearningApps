@@ -20,7 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -37,31 +36,35 @@ fun LoginScreen(
     viewModel: LoginViewModel,
     onAuthSuccess: () -> Unit
 ) {
-    val focusManager = LocalFocusManager.current
-    val scrollState = rememberScrollState()
+    val focusManager =
+        LocalFocusManager.current
+
+    val scrollState =
+        rememberScrollState()
 
     var useOtpMode by remember {
         mutableStateOf(false)
     }
 
-    var isOtpSent by remember {
-        mutableStateOf(false)
-    }
+    val primary =
+        MaterialTheme.colorScheme.primary
+
+    val background =
+        MaterialTheme.colorScheme.background
+
+    val onBackground =
+        MaterialTheme.colorScheme.onBackground
+
+    val onSurfaceVariant =
+        MaterialTheme.colorScheme.onSurfaceVariant
+
+    val onPrimary =
+        MaterialTheme.colorScheme.onPrimary
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(
-                            alpha = 0.25f
-                        ),
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(background)
     ) {
 
         Column(
@@ -75,20 +78,18 @@ fun LoginScreen(
                     horizontal = 28.dp,
                     vertical = 20.dp
                 ),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment =
+                Alignment.CenterHorizontally
         ) {
 
             Spacer(
-                modifier = Modifier.height(30.dp)
+                modifier =
+                    Modifier.height(36.dp)
             )
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                Text(
-                    text = when {
+            Text(
+                text =
+                    when {
                         useOtpMode ->
                             "OTP Verification"
 
@@ -98,321 +99,387 @@ fun LoginScreen(
                         else ->
                             "Welcome"
                     },
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 32.sp
-                    ),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                style =
+                    MaterialTheme.typography
+                        .headlineLarge
+                        .copy(
+                            fontWeight =
+                                FontWeight.ExtraBold,
+                            fontSize = 32.sp
+                        ),
+                textAlign =
+                    TextAlign.Center,
+                color =
+                    onBackground
+            )
 
-                Spacer(
-                    modifier = Modifier.height(10.dp)
-                )
+            Spacer(
+                modifier =
+                    Modifier.height(10.dp)
+            )
 
-                Text(
-                    text = when {
+            Text(
+                text =
+                    when {
                         useOtpMode ->
-                            "Enter your registered email to receive a 6-digit verification code."
+                            "Enter your email and use the verification code sent to you."
 
                         viewModel.isSignUp ->
-                            "Sign up with your email and password to create your account."
+                            "Create your account with your email and password."
 
                         else ->
                             "Sign in to continue to your workspace."
                     },
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                style =
+                    MaterialTheme.typography
+                        .bodyMedium,
+                textAlign =
+                    TextAlign.Center,
+                color =
+                    onSurfaceVariant,
+                modifier =
+                    Modifier.fillMaxWidth()
+            )
 
-                Spacer(
-                    modifier = Modifier.height(40.dp)
-                )
+            Spacer(
+                modifier =
+                    Modifier.height(38.dp)
+            )
+
+            OutlinedTextField(
+                value =
+                    viewModel.email,
+                onValueChange = {
+                    viewModel.updateEmail(it)
+                },
+                label = {
+                    Text("Email Address")
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector =
+                            Icons.Default.Email,
+                        contentDescription = null
+                    )
+                },
+                singleLine = true,
+                shape =
+                    RoundedCornerShape(16.dp),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType =
+                            KeyboardType.Email,
+                        imeAction =
+                            if (useOtpMode) {
+                                ImeAction.Done
+                            } else {
+                                ImeAction.Next
+                            }
+                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(16.dp)
+            )
+
+            if (!useOtpMode) {
 
                 OutlinedTextField(
-                    value = viewModel.email,
+                    value =
+                        viewModel.password,
                     onValueChange = {
-                        viewModel.email = it
+                        viewModel.password = it
                     },
                     label = {
-                        Text("Email Address")
+                        Text("Password")
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Email,
+                            imageVector =
+                                Icons.Default.Lock,
                             contentDescription = null
                         )
                     },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = if (
-                            useOtpMode
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                viewModel
+                                    .isPasswordVisible =
+                                    !viewModel
+                                        .isPasswordVisible
+                            }
                         ) {
-                            ImeAction.Done
-                        } else {
-                            ImeAction.Next
-                        }
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(
-                    modifier = Modifier.height(16.dp)
-                )
-
-                if (!useOtpMode) {
-
-                    OutlinedTextField(
-                        value = viewModel.password,
-                        onValueChange = {
-                            viewModel.password = it
-                        },
-                        label = {
-                            Text("Password")
-                        },
-                        leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Lock,
+                                imageVector =
+                                    if (
+                                        viewModel
+                                            .isPasswordVisible
+                                    ) {
+                                        Icons.Default.Visibility
+                                    } else {
+                                        Icons.Default.VisibilityOff
+                                    },
                                 contentDescription = null
                             )
+                        }
+                    },
+                    singleLine = true,
+                    shape =
+                        RoundedCornerShape(16.dp),
+                    visualTransformation =
+                        if (
+                            viewModel
+                                .isPasswordVisible
+                        ) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
                         },
-                        trailingIcon = {
-
-                            IconButton(
-                                onClick = {
-                                    viewModel.isPasswordVisible =
-                                        !viewModel.isPasswordVisible
-                                }
-                            ) {
-
-                                Icon(
-                                    imageVector =
-                                        if (
-                                            viewModel.isPasswordVisible
-                                        ) {
-                                            Icons.Default.Visibility
-                                        } else {
-                                            Icons.Default.VisibilityOff
-                                        },
-                                    contentDescription = null
-                                )
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        visualTransformation =
-                            if (
-                                viewModel.isPasswordVisible
-                            ) {
-                                VisualTransformation.None
-                            } else {
-                                PasswordVisualTransformation()
-                            },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType =
+                                KeyboardType.Password,
+                            imeAction =
+                                ImeAction.Done
                         ),
-                        keyboardActions = KeyboardActions(
+                    keyboardActions =
+                        KeyboardActions(
                             onDone = {
                                 focusManager.clearFocus()
+
                                 viewModel.authenticate(
                                     onAuthSuccess
                                 )
                             }
                         ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                } else {
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        OutlinedTextField(
-                            value = viewModel.otpCode,
-                            onValueChange = { value ->
-
-                                if (
-                                    value.length <= 6 &&
-                                    value.all {
-                                        it.isDigit()
-                                    }
-                                ) {
-                                    viewModel.otpCode = value
-                                }
-                            },
-                            label = {
-                                Text("6-Digit OTP")
-                            },
-                            placeholder = {
-                                Text("Enter 6-digit code")
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Pin,
-                                    contentDescription = null
-                                )
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = ImeAction.Done
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    focusManager.clearFocus()
-                                    viewModel.verifyOtp(
-                                        onAuthSuccess
-                                    )
-                                }
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        Spacer(
-                            modifier = Modifier.width(10.dp)
-                        )
-
-                        Button(
-                            onClick = {
-                                focusManager.clearFocus()
-                                viewModel.sendOtp()
-                                isOtpSent = true
-                            },
-                            enabled =
-                                !viewModel.isSendingOtp &&
-                                        viewModel.email.isNotBlank() &&
-                                        viewModel.otpCooldown == 0,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.height(56.dp)
-                        ) {
-
-                            if (
-                                viewModel.isSendingOtp
-                            ) {
-
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-
-                            } else {
-
-                                Text(
-                                    text = when {
-
-                                        viewModel.otpCooldown > 0 ->
-                                            "Resend (${viewModel.otpCooldown}s)"
-
-                                        isOtpSent ->
-                                            "Resend OTP"
-
-                                        else ->
-                                            "Send OTP"
-                                    },
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                AnimatedVisibility(
-                    visible =
-                        viewModel.successMessage != null,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-
-                    viewModel.successMessage?.let { message ->
-
-                        Column {
-
-                            Spacer(
-                                modifier = Modifier.height(20.dp)
-                            )
-
-                            Surface(
-                                color = MaterialTheme
-                                    .colorScheme
-                                    .primaryContainer
-                                    .copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-
-                                Text(
-                                    text = message,
-                                    color = MaterialTheme
-                                        .colorScheme
-                                        .onPrimaryContainer,
-                                    style = MaterialTheme
-                                        .typography
-                                        .bodyMedium,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(
-                                        horizontal = 16.dp,
-                                        vertical = 14.dp
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(
-                    modifier = Modifier.height(36.dp)
+                    modifier =
+                        Modifier.fillMaxWidth()
                 )
 
-                Button(
-                    onClick = {
+            } else {
 
-                        focusManager.clearFocus()
-
-                        if (useOtpMode) {
-
-                            viewModel.verifyOtp(
-                                onAuthSuccess
-                            )
-
-                        } else {
-
-                            viewModel.authenticate(
-                                onAuthSuccess
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    enabled = !viewModel.isLoading,
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 2.dp
-                    )
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
-                    if (viewModel.isLoading) {
+                    OutlinedTextField(
+                        value =
+                            viewModel.otpCode,
+                        onValueChange = { value ->
+                            if (
+                                value.length <= 6 &&
+                                value.all(
+                                    Char::isDigit
+                                )
+                            ) {
+                                viewModel.otpCode =
+                                    value
+                            }
+                        },
+                        label = {
+                            Text("6-Digit OTP")
+                        },
+                        placeholder = {
+                            Text("Enter code")
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector =
+                                    Icons.Default.Pin,
+                                contentDescription = null
+                            )
+                        },
+                        singleLine = true,
+                        shape =
+                            RoundedCornerShape(16.dp),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType =
+                                    KeyboardType.Number,
+                                imeAction =
+                                    ImeAction.Done
+                            ),
+                        keyboardActions =
+                            KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
 
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.5.dp
+                                    if (
+                                        viewModel.isOtpSent &&
+                                        viewModel.otpCode.length == 6
+                                    ) {
+                                        viewModel.verifyOtp(
+                                            onAuthSuccess
+                                        )
+                                    }
+                                }
+                            ),
+                        modifier =
+                            Modifier.weight(1f)
+                    )
+
+                    Spacer(
+                        modifier =
+                            Modifier.width(10.dp)
+                    )
+
+                    Button(
+                        onClick = {
+                            focusManager.clearFocus()
+                            viewModel.sendOtp()
+                        },
+                        enabled =
+                            !viewModel.isSendingOtp &&
+                                    viewModel.otpCooldown == 0 &&
+                                    viewModel.email.isNotBlank(),
+                        shape =
+                            RoundedCornerShape(16.dp),
+                        modifier =
+                            Modifier.height(56.dp)
+                    ) {
+
+                        if (
+                            viewModel.isSendingOtp
+                        ) {
+                            CircularProgressIndicator(
+                                modifier =
+                                    Modifier.size(20.dp),
+                                color =
+                                    onPrimary,
+                                strokeWidth =
+                                    2.dp
+                            )
+                        } else {
+                            Text(
+                                text =
+                                    if (
+                                        viewModel.otpCooldown > 0
+                                    ) {
+                                        "Resend\n${viewModel.otpCooldown}s"
+                                    } else if (
+                                        viewModel.isOtpSent
+                                    ) {
+                                        "Resend"
+                                    } else {
+                                        "Send OTP"
+                                    },
+                                fontSize =
+                                    12.sp,
+                                textAlign =
+                                    TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible =
+                    viewModel.successMessage != null,
+                enter =
+                    fadeIn(),
+                exit =
+                    fadeOut()
+            ) {
+                viewModel.successMessage?.let {
+                        message ->
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(18.dp)
+                    )
+
+                    Surface(
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .primaryContainer
+                                .copy(alpha = 0.65f),
+                        shape =
+                            RoundedCornerShape(12.dp),
+                        modifier =
+                            Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text =
+                                message,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                            textAlign =
+                                TextAlign.Center,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = 16.dp,
+                                    vertical = 14.dp
+                                )
+                        )
+                    }
+                }
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(28.dp)
+            )
+
+            Button(
+                onClick = {
+
+                    focusManager.clearFocus()
+
+                    if (useOtpMode) {
+
+                        viewModel.verifyOtp(
+                            onAuthSuccess
                         )
 
                     } else {
 
-                        Text(
-                            text = when {
+                        viewModel.authenticate(
+                            onAuthSuccess
+                        )
+                    }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                shape =
+                    RoundedCornerShape(16.dp),
+                enabled =
+                    if (useOtpMode) {
+                        !viewModel.isLoading &&
+                                viewModel.isOtpSent &&
+                                viewModel.otpCode.length == 6
+                    } else {
+                        !viewModel.isLoading
+                    }
+            ) {
 
+                if (viewModel.isLoading) {
+
+                    CircularProgressIndicator(
+                        modifier =
+                            Modifier.size(23.dp),
+                        color =
+                            onPrimary,
+                        strokeWidth =
+                            2.5.dp
+                    )
+
+                } else {
+
+                    Text(
+                        text =
+                            when {
                                 useOtpMode ->
                                     "Verify & Log In"
 
@@ -422,265 +489,143 @@ fun LoginScreen(
                                 else ->
                                     "Log In"
                             },
-                            style = MaterialTheme.typography
-                                .titleMedium
-                                .copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
-                        )
-                    }
-                }
-
-                Spacer(
-                    modifier = Modifier.height(12.dp)
-                )
-
-                if (!viewModel.isSignUp) {
-
-                    TextButton(
-                        onClick = {
-
-                            useOtpMode =
-                                !useOtpMode
-
-                            isOtpSent = false
-
-                            viewModel.errorMessage = null
-                            viewModel.successMessage = null
-                            viewModel.otpCode = ""
-                        }
-                    ) {
-
-                        Text(
-                            text =
-                                if (useOtpMode) {
-                                    "Use Password Instead"
-                                } else {
-                                    "Log In with OTP Code"
-                                },
-                            style = MaterialTheme.typography
-                                .bodyMedium
-                                .copy(
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                        )
-                    }
+                        fontWeight =
+                            FontWeight.Bold,
+                        fontSize =
+                            16.sp
+                    )
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        top = 16.dp,
-                        bottom = 12.dp
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Spacer(
+                modifier =
+                    Modifier.height(10.dp)
+            )
 
-                if (!useOtpMode) {
+            if (!viewModel.isSignUp) {
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                TextButton(
+                    onClick = {
+
+                        useOtpMode =
+                            !useOtpMode
+
+                        viewModel.switchLoginMethod()
+                    }
+                ) {
+                    Text(
+                        text =
+                            if (useOtpMode) {
+                                "Use Password Instead"
+                            } else {
+                                "Log In with OTP Code"
+                            },
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(10.dp)
+            )
+
+            if (!useOtpMode) {
+
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    horizontalArrangement =
+                        Arrangement.Center
+                ) {
+
+                    Text(
+                        text =
+                            if (
+                                viewModel.isSignUp
+                            ) {
+                                "Already have an account?"
+                            } else {
+                                "Don't have an account?"
+                            },
+                        color =
+                            onSurfaceVariant
+                    )
+
+                    TextButton(
+                        onClick = {
+                            viewModel.switchMode()
+                        }
                     ) {
-
                         Text(
                             text =
                                 if (
                                     viewModel.isSignUp
                                 ) {
-                                    "Already have an account?"
+                                    "Log In"
                                 } else {
-                                    "Don't have an account?"
+                                    "Sign Up"
                                 },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant
+                            fontWeight =
+                                FontWeight.Bold
                         )
-
-                        TextButton(
-                            onClick = {
-
-                                viewModel.isSignUp =
-                                    !viewModel.isSignUp
-
-                                useOtpMode = false
-                                isOtpSent = false
-
-                                viewModel.errorMessage = null
-                                viewModel.successMessage = null
-                                viewModel.password = ""
-                                viewModel.otpCode = ""
-                            }
-                        ) {
-
-                            Text(
-                                text =
-                                    if (
-                                        viewModel.isSignUp
-                                    ) {
-                                        "Log In"
-                                    } else {
-                                        "Sign Up"
-                                    },
-                                style = MaterialTheme.typography
-                                    .bodyMedium
-                                    .copy(
-                                        fontWeight = FontWeight.Bold
-                                    )
-                            )
-                        }
                     }
                 }
             }
+
+            Spacer(
+                modifier =
+                    Modifier.height(12.dp)
+            )
         }
 
-        if (
-            viewModel.errorMessage != null
-        ) {
+        viewModel.errorMessage?.let { message ->
 
             AlertDialog(
                 onDismissRequest = {
-                    viewModel.errorMessage = null
+                    viewModel.clearError()
                 },
                 title = {
-
                     Text(
-                        text = "Authentication Failed",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        text =
+                            "Authentication Failed",
+                        fontWeight =
+                            FontWeight.Bold,
+                        fontSize =
+                            18.sp
                     )
                 },
                 text = {
-
                     Text(
-                        text = formatFriendlyError(
-                            viewModel.errorMessage
-                        ),
+                        text = message,
                         fontSize = 15.sp,
-                        color = MaterialTheme
-                            .colorScheme
-                            .onSurfaceVariant
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
                     )
                 },
                 confirmButton = {
-
                     TextButton(
                         onClick = {
-                            viewModel.errorMessage = null
+                            viewModel.clearError()
                         }
                     ) {
-
                         Text(
                             text = "OK",
-                            fontWeight = FontWeight.Bold
+                            fontWeight =
+                                FontWeight.Bold
                         )
                     }
                 },
-                shape = RoundedCornerShape(20.dp),
-                containerColor = MaterialTheme
-                    .colorScheme
-                    .surface,
-                tonalElevation = 6.dp
+                shape =
+                    RoundedCornerShape(20.dp),
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surface
             )
         }
-    }
-}
-
-private fun formatFriendlyError(
-    rawError: String?
-): String {
-
-    if (rawError.isNullOrBlank()) {
-        return "An error occurred. Please try again."
-    }
-
-    val error =
-        rawError.lowercase()
-
-    return when {
-
-        error.contains(
-            "invalid login credentials"
-        ) ||
-                error.contains(
-                    "invalid_credentials"
-                ) ->
-            "Incorrect email or password."
-
-        error.contains(
-            "invalid token"
-        ) ||
-                error.contains(
-                    "otp_expired"
-                ) ||
-                error.contains(
-                    "token has expired"
-                ) ->
-            "Invalid or expired OTP code."
-
-        error.contains(
-            "email not confirmed"
-        ) ->
-            "Please verify your email address before logging in."
-
-        error.contains(
-            "user already registered"
-        ) ||
-                error.contains(
-                    "already_exists"
-                ) ->
-            "This email address is already registered."
-
-        error.contains(
-            "rate limit"
-        ) ||
-                error.contains(
-                    "rate_limit"
-                ) ->
-            "Too many requests. Please try again later."
-
-        error.contains(
-            "disabled"
-        ) ->
-            "Email provider or OTP is disabled in Supabase."
-
-        error.contains(
-            "password should be"
-        ) ||
-                error.contains(
-                    "password_length"
-                ) ->
-            "Password must be at least 6 characters long."
-
-        error.contains(
-            "invalid email"
-        ) ||
-                error.contains(
-                    "email_format"
-                ) ->
-            "Please enter a valid email address."
-
-        error.contains(
-            "unexpected failure error sending"
-        ) ||
-                error.contains(
-                    "error sending confirmation email"
-                ) ->
-            "Failed to send confirmation email. Please check your Supabase email settings."
-
-        error.contains(
-            "network"
-        ) ||
-                error.contains(
-                    "connect"
-                ) ->
-            "Network error. Please check your internet connection."
-
-        else ->
-            rawError
     }
 }

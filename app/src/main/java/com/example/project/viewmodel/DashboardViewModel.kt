@@ -3,7 +3,8 @@ package com.example.project.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.project.data.supabase
-import com.example.project.model.TaskItem
+import com.example.project.model.StudySession
+import com.example.project.model.StudySessionInsert
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Job
@@ -13,79 +14,103 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import kotlin.time.Duration.Companion.milliseconds
 
 enum class FocusState {
-    IDLE, FOCUSING, BREAK
+    IDLE,
+    FOCUSING,
+    BREAK,
+    PAUSED
 }
 
 data class DashboardUiState(
     val userName: String = "",
-    val currentTimeText: String = "",
     val focusState: FocusState = FocusState.IDLE,
-    val remainingSeconds: Int = 0,
-    val tasks: List<TaskItem> = emptyList()
-) {
-    val completedCount: Int get() = tasks.count { it.isCompleted }
-    val totalCount: Int get() = tasks.size
-    val nextTask: TaskItem? get() = tasks.firstOrNull { !it.isCompleted }
-}
+    val remainingSeconds: Int = 0
+)
 
 class DashboardViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState())
-    val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private val _uiState =
+        MutableStateFlow(
+            DashboardUiState()
+        )
 
+    val uiState: StateFlow<DashboardUiState> =
+        _uiState.asStateFlow()
+
+    private val _currentTimeText =
+        MutableStateFlow("")
+
+    val currentTimeText: StateFlow<String> =
+        _currentTimeText.asStateFlow()
+
+    private var clockJob: Job? = null
     private var timerJob: Job? = null
+
+    private var remainingTotalFocusSeconds = 0
+    private var focusBlockSeconds = 0
+    private var breakDurationSeconds = 0
+    private var breakRemainingSeconds = 0
+
+    private var skipBreaks = false
+    private var lastActiveState =
+        FocusState.FOCUSING
+
+    private var actualElapsedSeconds = 0
 
     init {
         startClock()
         loadUserData()
-        fetchTasks()
     }
 
     private fun startClock() {
-        viewModelScope.launch {
-            val formatter = DateTimeFormatter.ofPattern("hh : mm a")
-            while (true) {
-                val nowFormatted = LocalTime.now().format(formatter)
-                _uiState.update { it.copy(currentTimeText = nowFormatted) }
-                delay(1000L.milliseconds)
+        clockJob?.cancel()
+
+        clockJob =
+            viewModelScope.launch {
+                val formatter =
+                    DateTimeFormatter
+                        .ofPattern("hh : mm a")
+
+                while (true) {
+                    _currentTimeText.value =
+                        LocalTime
+                            .now()
+                            .format(formatter)
+
+                    delay(1000L)
+                }
             }
-        }
     }
 
     fun loadUserData() {
-        val user = supabase.auth.currentUserOrNull()
-        val email = user?.email.orEmpty()
-        val displayName = email.substringBefore("@")
-            .ifBlank { "User" }
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        val email =
+            supabase.auth
+                .currentUserOrNull()
+                ?.email
+                .orEmpty()
+
+        val displayName =
+            email
+                .substringBefore("@")
+                .ifBlank {
+                    "User"
+                }
+                .replaceFirstChar {
+                    if (it.isLowerCase()) {
+                        it.titlecase()
+                    } else {
+                        it.toString()
+                    }
+                }
 
         _uiState.update {
-            it.copy(userName = displayName)
-        }
-    }
-
-    fun fetchTasks() {
-        val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return
-
-        viewModelScope.launch {
-            try {
-                val result = supabase.from("tasks")
-                    .select {
-                        filter {
-                            eq("user_id", currentUserId)
-                        }
-                    }
-                    .decodeList<TaskItem>()
-
-                _uiState.update { it.copy(tasks = result) }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            it.copy(
+                userName = displayName
+            )
         }
     }
 
@@ -98,74 +123,355 @@ class DashboardViewModel : ViewModel() {
     ) {
         timerJob?.cancel()
 
-        val totalFocusSeconds = targetHours * 3600 + targetMinutes * 60
-        if (totalFocusSeconds <= 0) return
+        val totalFocusSeconds =
+            targetHours * 3600 +
+                    targetMinutes * 60
 
-        timerJob = viewModelScope.launch {
+        if (totalFocusSeconds <= 0) {
+            return
+        }
 
-            var remainingFocus = totalFocusSeconds
-            val focusBlockSeconds = breakAfterMinute * 60
-            val breakSeconds = breakDurationMinute * 60
+        remainingTotalFocusSeconds =
+            totalFocusSeconds
 
-            while (true) {
+        focusBlockSeconds =
+            breakAfterMinute * 60
 
-                val currentFocusSeconds =
-                    if (skipBreaks || breakAfterMinute <= 0)
-                        remainingFocus
-                    else
-                        minOf(remainingFocus, focusBlockSeconds)
+        breakDurationSeconds =
+            breakDurationMinute * 60
 
-                _uiState.update {
-                    it.copy(
-                        focusState = FocusState.FOCUSING,
-                        remainingSeconds = currentFocusSeconds
-                    )
-                }
+        this.skipBreaks =
+            skipBreaks
 
-                while (_uiState.value.remainingSeconds > 0) {
+        breakRemainingSeconds = 0
+        actualElapsedSeconds = 0
+        lastActiveState =
+            FocusState.FOCUSING
+
+        _uiState.update {
+            it.copy(
+                focusState =
+                    FocusState.FOCUSING,
+                remainingSeconds =
+                    remainingTotalFocusSeconds
+            )
+        }
+
+        runTimerLoop()
+    }
+
+    fun pauseFocusSession() {
+        val currentState =
+            _uiState.value.focusState
+
+        if (
+            currentState !=
+            FocusState.FOCUSING &&
+            currentState !=
+            FocusState.BREAK
+        ) {
+            return
+        }
+
+        lastActiveState =
+            currentState
+
+        timerJob?.cancel()
+        timerJob = null
+
+        _uiState.update {
+            it.copy(
+                focusState =
+                    FocusState.PAUSED,
+                remainingSeconds =
+                    remainingTotalFocusSeconds
+            )
+        }
+    }
+
+    fun resumeFocusSession() {
+        if (
+            _uiState.value.focusState !=
+            FocusState.PAUSED
+        ) {
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                focusState =
+                    lastActiveState,
+                remainingSeconds =
+                    remainingTotalFocusSeconds
+            )
+        }
+
+        runTimerLoop()
+    }
+
+    private fun runTimerLoop() {
+        timerJob?.cancel()
+
+        timerJob =
+            viewModelScope.launch {
+                while (
+                    _uiState.value.focusState ==
+                    FocusState.FOCUSING ||
+                    _uiState.value.focusState ==
+                    FocusState.BREAK
+                ) {
                     delay(1000L)
 
-                    _uiState.update {
-                        it.copy(
-                            remainingSeconds = it.remainingSeconds - 1
-                        )
-                    }
-                }
+                    when (
+                        _uiState.value.focusState
+                    ) {
+                        FocusState.FOCUSING -> {
+                            if (
+                                remainingTotalFocusSeconds > 0
+                            ) {
+                                remainingTotalFocusSeconds--
+                                actualElapsedSeconds++
 
-                remainingFocus -= currentFocusSeconds
+                                _uiState.update {
+                                    it.copy(
+                                        remainingSeconds =
+                                            remainingTotalFocusSeconds
+                                    )
+                                }
+                            }
 
-                if (remainingFocus <= 0)
-                    break
+                            if (
+                                remainingTotalFocusSeconds <=
+                                0
+                            ) {
+                                finishFocusSession()
+                                break
+                            }
 
-                _uiState.update {
-                    it.copy(
-                        focusState = FocusState.BREAK,
-                        remainingSeconds = breakSeconds
-                    )
-                }
+                            if (
+                                !skipBreaks &&
+                                focusBlockSeconds > 0 &&
+                                actualElapsedSeconds %
+                                focusBlockSeconds == 0
+                            ) {
+                                startBreak()
+                            }
+                        }
 
-                while (_uiState.value.remainingSeconds > 0) {
-                    delay(1000L.milliseconds)
+                        FocusState.BREAK -> {
+                            if (
+                                breakRemainingSeconds > 0
+                            ) {
+                                breakRemainingSeconds--
+                            }
 
-                    _uiState.update {
-                        it.copy(
-                            remainingSeconds = it.remainingSeconds - 1
-                        )
+                            if (
+                                breakRemainingSeconds <=
+                                0
+                            ) {
+                                startNextFocusBlock()
+                            }
+                        }
+
+                        else -> break
                     }
                 }
             }
+    }
 
-            _uiState.update {
-                it.copy(
-                    focusState = FocusState.IDLE,
-                    remainingSeconds = 0
-                )
-            }
+    private fun startBreak() {
+        if (
+            breakDurationSeconds <= 0 ||
+            remainingTotalFocusSeconds <= 0
+        ) {
+            return
         }
+
+        breakRemainingSeconds =
+            breakDurationSeconds
+
+        _uiState.update {
+            it.copy(
+                focusState =
+                    FocusState.BREAK,
+                remainingSeconds =
+                    remainingTotalFocusSeconds
+            )
+        }
+
+        lastActiveState =
+            FocusState.BREAK
+    }
+
+    private fun startNextFocusBlock() {
+        if (
+            remainingTotalFocusSeconds <= 0
+        ) {
+            finishFocusSession()
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                focusState =
+                    FocusState.FOCUSING,
+                remainingSeconds =
+                    remainingTotalFocusSeconds
+            )
+        }
+
+        lastActiveState =
+            FocusState.FOCUSING
+    }
+
+    private fun finishFocusSession() {
+        timerJob?.cancel()
+        timerJob = null
+
+        val elapsedToSave =
+            actualElapsedSeconds
+
+        _uiState.update {
+            it.copy(
+                focusState =
+                    FocusState.IDLE,
+                remainingSeconds = 0
+            )
+        }
+
+        if (elapsedToSave > 0) {
+            saveSessionToDatabase(
+                elapsedToSave
+            )
+        }
+
+        resetFocusValues()
     }
 
     fun stopFocusSession() {
         timerJob?.cancel()
-        _uiState.update { it.copy(focusState = FocusState.IDLE, remainingSeconds = 0) }
+        timerJob = null
+
+        val elapsedToSave =
+            actualElapsedSeconds
+
+        _uiState.update {
+            it.copy(
+                focusState =
+                    FocusState.IDLE,
+                remainingSeconds = 0
+            )
+        }
+
+        if (elapsedToSave > 0) {
+            saveSessionToDatabase(
+                elapsedToSave
+            )
+        }
+
+        resetFocusValues()
+    }
+
+    fun endAndSaveFocusSession() {
+        stopFocusSession()
+    }
+
+    private fun resetFocusValues() {
+        remainingTotalFocusSeconds = 0
+        breakRemainingSeconds = 0
+        actualElapsedSeconds = 0
+        focusBlockSeconds = 0
+        breakDurationSeconds = 0
+    }
+
+    private fun saveSessionToDatabase(
+        elapsedSeconds: Int
+    ) {
+        if (elapsedSeconds <= 0) {
+            return
+        }
+
+        val currentUserId =
+            supabase.auth
+                .currentUserOrNull()
+                ?.id
+                ?: return
+
+        viewModelScope.launch {
+            try {
+                val todayStart =
+                    LocalDate
+                        .now()
+                        .atStartOfDay()
+                        .toString() + ":00Z"
+
+                val existingSessions =
+                    supabase
+                        .from("study_sessions")
+                        .select {
+                            filter {
+                                eq(
+                                    "user_id",
+                                    currentUserId
+                                )
+                                gte(
+                                    "created_at",
+                                    todayStart
+                                )
+                            }
+                        }
+                        .decodeList<StudySession>()
+
+                val todaySession =
+                    existingSessions.firstOrNull()
+
+                if (
+                    todaySession != null &&
+                    todaySession.id != null
+                ) {
+                    val newTotal =
+                        todaySession.durationSeconds +
+                                elapsedSeconds
+
+                    supabase
+                        .from("study_sessions")
+                        .update(
+                            {
+                                set(
+                                    "duration_seconds",
+                                    newTotal
+                                )
+                            }
+                        ) {
+                            filter {
+                                eq(
+                                    "id",
+                                    todaySession.id
+                                )
+                            }
+                        }
+                } else {
+                    supabase
+                        .from("study_sessions")
+                        .insert(
+                            StudySessionInsert(
+                                userId =
+                                    currentUserId,
+                                durationSeconds =
+                                    elapsedSeconds
+                            )
+                        )
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    override fun onCleared() {
+        clockJob?.cancel()
+        timerJob?.cancel()
+        super.onCleared()
     }
 }
