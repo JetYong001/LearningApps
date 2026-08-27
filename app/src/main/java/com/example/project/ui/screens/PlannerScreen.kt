@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,7 +48,7 @@ fun PlannerScreen(
     viewModel.items.collectAsState()
 
     var selectedTab by
-    remember {
+    rememberSaveable {
         mutableIntStateOf(0)
     }
 
@@ -77,7 +78,7 @@ fun PlannerScreen(
     }
 
     var prioritySortingEnabled by
-    remember {
+    rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -160,8 +161,9 @@ fun PlannerScreen(
 
     fun savePlannerItem() {
 
-        if (title.isBlank()) {
-
+        if (
+            title.isBlank()
+        ) {
             Toast.makeText(
                 context,
                 "Please enter a title",
@@ -171,8 +173,9 @@ fun PlannerScreen(
             return
         }
 
-        if (dueDate.isBlank()) {
-
+        if (
+            dueDate.isBlank()
+        ) {
             Toast.makeText(
                 context,
                 "Please select a due date",
@@ -185,7 +188,6 @@ fun PlannerScreen(
         if (
             !isValidTime(dueTime)
         ) {
-
             Toast.makeText(
                 context,
                 "Please enter valid time (HH:mm)",
@@ -196,7 +198,9 @@ fun PlannerScreen(
         }
 
         val itemType =
-            if (selectedTab == 0) {
+            if (
+                selectedTab == 0
+            ) {
                 "task"
             } else {
                 "project"
@@ -208,9 +212,6 @@ fun PlannerScreen(
                     editingItem
                         ?.id
                         .orEmpty(),
-
-                itemType =
-                    itemType,
 
                 title =
                     title.trim(),
@@ -224,6 +225,9 @@ fun PlannerScreen(
                 status =
                     status,
 
+                itemType =
+                    itemType,
+
                 createdAt =
                     editingItem
                         ?.createdAt
@@ -234,22 +238,33 @@ fun PlannerScreen(
             false
     }
 
-    val type =
-        if (selectedTab == 0) {
+    val currentType =
+        if (
+            selectedTab == 0
+        ) {
             "task"
         } else {
             "project"
         }
 
     val filteredItems =
-        plannerItems.filter {
-            it.itemType == type
+        plannerItems.filter { item ->
+
+            item.itemType.equals(
+                currentType,
+                ignoreCase = true
+            )
         }
 
     val visibleItems =
-        if (prioritySortingEnabled) {
-            filteredItems.sortedBy {
-                dueDateTime(it.dueAt)
+        if (
+            prioritySortingEnabled
+        ) {
+            filteredItems.sortedBy { item ->
+
+                dueDateTime(
+                    item.dueAt
+                )
             }
         } else {
             filteredItems
@@ -344,7 +359,9 @@ fun PlannerScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(5.dp)
+                            .padding(
+                                5.dp
+                            )
                 ) {
 
                     PlannerTab(
@@ -409,7 +426,9 @@ fun PlannerScreen(
 
                     Text(
                         text =
-                            if (selectedTab == 0) {
+                            if (
+                                selectedTab == 0
+                            ) {
                                 "Your Tasks"
                             } else {
                                 "Your Projects"
@@ -460,7 +479,7 @@ fun PlannerScreen(
                         ) {
                             MaterialTheme
                                 .colorScheme
-                                .primaryContainer
+                                .primary
                         } else {
                             MaterialTheme
                                 .colorScheme
@@ -495,9 +514,17 @@ fun PlannerScreen(
                                 ),
 
                             tint =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant
+                                if (
+                                    prioritySortingEnabled
+                                ) {
+                                    MaterialTheme
+                                        .colorScheme
+                                        .onPrimary
+                                } else {
+                                    MaterialTheme
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                }
                         )
 
                         Spacer(
@@ -524,9 +551,17 @@ fun PlannerScreen(
                                 FontWeight.SemiBold,
 
                             color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant
+                                if (
+                                    prioritySortingEnabled
+                                ) {
+                                    MaterialTheme
+                                        .colorScheme
+                                        .onPrimary
+                                } else {
+                                    MaterialTheme
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                }
                         )
                     }
                 }
@@ -539,7 +574,9 @@ fun PlannerScreen(
                     )
             )
 
-            if (visibleItems.isEmpty()) {
+            if (
+                visibleItems.isEmpty()
+            ) {
 
                 Box(
                     modifier =
@@ -573,7 +610,8 @@ fun PlannerScreen(
                             Icon(
                                 imageVector =
                                     if (
-                                        type == "task"
+                                        currentType ==
+                                        "task"
                                     ) {
                                         Icons.Default.Edit
                                     } else {
@@ -610,7 +648,8 @@ fun PlannerScreen(
                         Text(
                             text =
                                 if (
-                                    type == "task"
+                                    currentType ==
+                                    "task"
                                 ) {
                                     "No tasks yet"
                                 } else {
@@ -628,47 +667,86 @@ fun PlannerScreen(
                                     .colorScheme
                                     .onBackground
                         )
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(
+                                    5.dp
+                                )
+                        )
+
+                        Text(
+                            text =
+                                "Create one using the + button",
+
+                            fontSize =
+                                13.sp,
+
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
+                        )
                     }
                 }
 
             } else {
 
-                LazyColumn(
-                    modifier =
-                        Modifier.fillMaxSize(),
-
-                    verticalArrangement =
-                        Arrangement.spacedBy(
-                            14.dp
-                        ),
-
-                    contentPadding =
-                        PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = 100.dp
-                        )
+                /*
+                 * The key below forces a fresh LazyColumn
+                 * whenever Tasks/Projects or Sort changes.
+                 *
+                 * This prevents LazyColumn from trying to
+                 * preserve the old item's scroll position
+                 * after the list order changes.
+                 */
+                key(
+                    selectedTab,
+                    prioritySortingEnabled
                 ) {
 
-                    items(
-                        visibleItems,
-                        key = {
-                            it.id
-                        }
-                    ) { item ->
+                    LazyColumn(
+                        modifier =
+                            Modifier.fillMaxSize(),
 
-                        PlannerCard(
-                            item = item,
+                        verticalArrangement =
+                            Arrangement.spacedBy(
+                                14.dp
+                            ),
 
-                            onEdit = {
-                                openEditor(item)
-                            },
+                        contentPadding =
+                            PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 100.dp
+                            )
+                    ) {
 
-                            onDelete = {
-                                deletingItem =
-                                    item
+                        items(
+                            items =
+                                visibleItems,
+
+                            key = {
+                                it.id
                             }
-                        )
+                        ) { item ->
+
+                            PlannerCard(
+                                item =
+                                    item,
+
+                                onEdit = {
+                                    openEditor(
+                                        item
+                                    )
+                                },
+
+                                onDelete = {
+                                    deletingItem =
+                                        item
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -684,8 +762,12 @@ fun PlannerScreen(
                     .align(
                         Alignment.BottomEnd
                     )
-                    .padding(18.dp)
-                    .size(64.dp),
+                    .padding(
+                        18.dp
+                    )
+                    .size(
+                        64.dp
+                    ),
 
             shape =
                 RoundedCornerShape(
@@ -718,7 +800,9 @@ fun PlannerScreen(
         }
     }
 
-    if (showEditor) {
+    if (
+        showEditor
+    ) {
 
         AlertDialog(
             onDismissRequest = {
@@ -767,7 +851,12 @@ fun PlannerScreen(
                         22.sp,
 
                     fontWeight =
-                        FontWeight.Bold
+                        FontWeight.Bold,
+
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurface
                 )
             },
 
@@ -856,8 +945,10 @@ fun PlannerScreen(
                             ) {
 
                                 Icon(
-                                    Icons.Default
-                                        .CalendarToday,
+                                    imageVector =
+                                        Icons.Default
+                                            .CalendarToday,
+
                                     contentDescription =
                                         "Select date"
                                 )
@@ -907,8 +998,10 @@ fun PlannerScreen(
                             ) {
 
                                 Icon(
-                                    Icons.Default
-                                        .Schedule,
+                                    imageVector =
+                                        Icons.Default
+                                            .Schedule,
+
                                     contentDescription =
                                         "Select time"
                                 )
@@ -1019,7 +1112,9 @@ fun PlannerScreen(
         )
     }
 
-    if (showDatePicker) {
+    if (
+        showDatePicker
+    ) {
 
         val todayUtcMillis =
             remember {
@@ -1081,7 +1176,8 @@ fun PlannerScreen(
 
         DatePickerDialog(
             onDismissRequest = {
-                showDatePicker = false
+                showDatePicker =
+                    false
             },
 
             confirmButton = {
@@ -1107,11 +1203,14 @@ fun PlannerScreen(
 
                                 dueDate =
                                     formatter.format(
-                                        Date(millis)
+                                        Date(
+                                            millis
+                                        )
                                     )
                             }
 
-                        showDatePicker = false
+                        showDatePicker =
+                            false
                     }
                 ) {
 
@@ -1123,7 +1222,8 @@ fun PlannerScreen(
 
                 TextButton(
                     onClick = {
-                        showDatePicker = false
+                        showDatePicker =
+                            false
                     }
                 ) {
 
@@ -1139,7 +1239,9 @@ fun PlannerScreen(
         }
     }
 
-    if (showTimePicker) {
+    if (
+        showTimePicker
+    ) {
 
         val parts =
             dueTime.split(":")
@@ -1164,7 +1266,8 @@ fun PlannerScreen(
 
         AlertDialog(
             onDismissRequest = {
-                showTimePicker = false
+                showTimePicker =
+                    false
             },
 
             title = {
@@ -1227,10 +1330,14 @@ fun PlannerScreen(
             },
 
             title = {
+
                 Text(
                     "Delete ${
                         if (
-                            item.itemType == "task"
+                            item.itemType.equals(
+                                "task",
+                                ignoreCase = true
+                            )
                         ) {
                             "Task"
                         } else {
@@ -1241,6 +1348,7 @@ fun PlannerScreen(
             },
 
             text = {
+
                 Text(
                     "Are you sure you want to delete \"${item.title}\"?"
                 )
@@ -1255,16 +1363,21 @@ fun PlannerScreen(
                             item
                         )
 
-                        deletingItem = null
+                        deletingItem =
+                            null
                     }
                 ) {
 
                     Text(
                         "Delete",
+
                         color =
                             MaterialTheme
                                 .colorScheme
-                                .error
+                                .error,
+
+                        fontWeight =
+                            FontWeight.Bold
                     )
                 }
             },
@@ -1273,7 +1386,9 @@ fun PlannerScreen(
 
                 TextButton(
                     onClick = {
-                        deletingItem = null
+
+                        deletingItem =
+                            null
                     }
                 ) {
 
@@ -1303,7 +1418,9 @@ private fun PlannerTab(
             ),
 
         color =
-            if (selected) {
+            if (
+                selected
+            ) {
                 MaterialTheme
                     .colorScheme
                     .primary
@@ -1332,14 +1449,18 @@ private fun PlannerTab(
                     15.sp,
 
                 fontWeight =
-                    if (selected) {
+                    if (
+                        selected
+                    ) {
                         FontWeight.Bold
                     } else {
                         FontWeight.Medium
                     },
 
                 color =
-                    if (selected) {
+                    if (
+                        selected
+                    ) {
                         MaterialTheme
                             .colorScheme
                             .onPrimary
@@ -1377,6 +1498,14 @@ private fun PlannerCard(
         shape =
             RoundedCornerShape(
                 22.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surface
             )
     ) {
 
@@ -1397,7 +1526,9 @@ private fun PlannerCard(
 
                 Column(
                     modifier =
-                        Modifier.weight(1f)
+                        Modifier.weight(
+                            1f
+                        )
                 ) {
 
                     Text(
@@ -1408,7 +1539,12 @@ private fun PlannerCard(
                             19.sp,
 
                         fontWeight =
-                            FontWeight.Bold
+                            FontWeight.Bold,
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurface
                     )
 
                     if (
@@ -1446,9 +1582,17 @@ private fun PlannerCard(
                     ) {
 
                         Icon(
-                            Icons.Default.MoreVert,
+                            imageVector =
+                                Icons.Default
+                                    .MoreVert,
+
                             contentDescription =
-                                "Actions"
+                                "Actions",
+
+                            tint =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
                         )
                     }
 
@@ -1457,16 +1601,23 @@ private fun PlannerCard(
                             showMenu,
 
                         onDismissRequest = {
-                            showMenu = false
+                            showMenu =
+                                false
                         }
                     ) {
 
-                        if (!missed) {
+                        if (
+                            !missed
+                        ) {
 
                             DropdownMenuItem(
                                 leadingIcon = {
+
                                     Icon(
-                                        Icons.Default.Edit,
+                                        imageVector =
+                                            Icons.Default
+                                                .Edit,
+
                                         contentDescription =
                                             null
                                     )
@@ -1478,7 +1629,8 @@ private fun PlannerCard(
 
                                 onClick = {
 
-                                    showMenu = false
+                                    showMenu =
+                                        false
 
                                     onEdit()
                                 }
@@ -1487,20 +1639,38 @@ private fun PlannerCard(
 
                         DropdownMenuItem(
                             leadingIcon = {
+
                                 Icon(
-                                    Icons.Default.Delete,
+                                    imageVector =
+                                        Icons.Default
+                                            .Delete,
+
                                     contentDescription =
-                                        null
+                                        null,
+
+                                    tint =
+                                        MaterialTheme
+                                            .colorScheme
+                                            .error
                                 )
                             },
 
                             text = {
-                                Text("Delete")
+
+                                Text(
+                                    "Delete",
+
+                                    color =
+                                        MaterialTheme
+                                            .colorScheme
+                                            .error
+                                )
                             },
 
                             onClick = {
 
-                                showMenu = false
+                                showMenu =
+                                    false
 
                                 onDelete()
                             }
@@ -1516,7 +1686,12 @@ private fun PlannerCard(
                     )
             )
 
-            HorizontalDivider()
+            HorizontalDivider(
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .outlineVariant
+            )
 
             Spacer(
                 modifier =
@@ -1537,7 +1712,8 @@ private fun PlannerCard(
 
                 InfoChip(
                     icon =
-                        Icons.Default.CalendarToday,
+                        Icons.Default
+                            .CalendarToday,
 
                     text =
                         item.dueAt
@@ -1548,7 +1724,8 @@ private fun PlannerCard(
 
                 InfoChip(
                     icon =
-                        Icons.Default.Schedule,
+                        Icons.Default
+                            .Schedule,
 
                     text =
                         item.dueAt
@@ -1632,7 +1809,12 @@ private fun InfoChip(
                     text,
 
                 fontSize =
-                    11.sp
+                    11.sp,
+
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onSurfaceVariant
             )
         }
     }
@@ -1642,9 +1824,12 @@ private fun InfoChip(
 private fun StatusChip(
     status: String
 ) {
+    val normalizedStatus =
+        status.lowercase()
+
     val containerColor =
         when (
-            status.lowercase()
+            normalizedStatus
         ) {
 
             "completed" ->
@@ -1675,7 +1860,7 @@ private fun StatusChip(
 
     val contentColor =
         when (
-            status.lowercase()
+            normalizedStatus
         ) {
 
             "completed" ->
@@ -1728,7 +1913,9 @@ private fun StatusChip(
             Box(
                 modifier =
                     Modifier
-                        .size(7.dp)
+                        .size(
+                            7.dp
+                        )
                         .clip(
                             CircleShape
                         )
@@ -1774,12 +1961,14 @@ private fun dueDateTime(
             )
 
         formatter
-            .parse(value)
+            .parse(
+                value
+            )
             ?.time
             ?: Long.MAX_VALUE
 
     } catch (
-        e: Exception
+        _: Exception
     ) {
 
         Long.MAX_VALUE
@@ -1792,5 +1981,7 @@ private fun isValidTime(
 
     return Regex(
         "^([01]\\d|2[0-3]):[0-5]\\d$"
-    ).matches(value)
+    ).matches(
+        value
+    )
 }

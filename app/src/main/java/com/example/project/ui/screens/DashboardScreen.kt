@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,6 +51,12 @@ private data class PlannerReminder(
     val message: String
 )
 
+private val plannerDateFormatter =
+    DateTimeFormatter.ofPattern(
+        "dd MMMM yyyy, HH:mm",
+        Locale.ENGLISH
+    )
+
 @Composable
 fun DashboardScreen(
     navController: NavController,
@@ -68,6 +73,9 @@ fun DashboardScreen(
     val plannerItems by
     plannerViewModel.items.collectAsState()
 
+    val readReminderIds by
+    plannerViewModel.readReminderIds.collectAsState()
+
     val profile by
     profileViewModel.profile.collectAsState()
 
@@ -83,11 +91,6 @@ fun DashboardScreen(
 
     var showReminders by
     remember {
-        mutableStateOf(false)
-    }
-
-    var notificationsRead by
-    rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -141,9 +144,9 @@ fun DashboardScreen(
     val completedItems =
         remember(plannerItems) {
 
-            plannerItems.filter {
+            plannerItems.filter { item ->
 
-                it.status.equals(
+                item.status.equals(
                     "Completed",
                     ignoreCase = true
                 )
@@ -154,9 +157,9 @@ fun DashboardScreen(
         remember(plannerItems) {
 
             plannerItems
-                .filter {
+                .filter { item ->
 
-                    it.status.equals(
+                    item.status.equals(
                         "Missed",
                         ignoreCase = true
                     )
@@ -173,13 +176,13 @@ fun DashboardScreen(
         remember(plannerItems) {
 
             plannerItems
-                .filter {
+                .filter { item ->
 
-                    !it.status.equals(
+                    !item.status.equals(
                         "Completed",
                         ignoreCase = true
                     ) &&
-                            !it.status.equals(
+                            !item.status.equals(
                                 "Missed",
                                 ignoreCase = true
                             )
@@ -217,6 +220,19 @@ fun DashboardScreen(
             plannerReminders(
                 plannerItems
             )
+        }
+
+    val unreadReminders =
+        remember(
+            reminders,
+            readReminderIds
+        ) {
+
+            reminders.filter { reminder ->
+
+                reminder.item.id !in
+                        readReminderIds
+            }
         }
 
     LazyColumn(
@@ -270,10 +286,14 @@ fun DashboardScreen(
                     IconButton(
                         onClick = {
 
-                            showReminders =
-                                true
+                            plannerViewModel
+                                .markRemindersAsRead(
+                                    reminders.map {
+                                        it.item
+                                    }
+                                )
 
-                            notificationsRead =
+                            showReminders =
                                 true
                         }
                     ) {
@@ -294,8 +314,7 @@ fun DashboardScreen(
                     }
 
                     if (
-                        reminders.isNotEmpty() &&
-                        !notificationsRead
+                        unreadReminders.isNotEmpty()
                     ) {
 
                         Badge(
@@ -350,16 +369,19 @@ fun DashboardScreen(
                     completedItems.size,
 
                 onRemainingClick = {
+
                     selectedList =
                         TaskListType.REMAINING
                 },
 
                 onMissedClick = {
+
                     selectedList =
                         TaskListType.MISSED
                 },
 
                 onCompletedClick = {
+
                     selectedList =
                         TaskListType.COMPLETED
                 }
@@ -392,10 +414,12 @@ fun DashboardScreen(
                 selectedItems,
 
             onDismiss = {
+
                 selectedList = null
             },
 
             onItemClick = {
+
                 selectedDetail = it
             }
         )
@@ -408,18 +432,22 @@ fun DashboardScreen(
                 item,
 
             onDismiss = {
+
                 selectedDetail = null
             }
         )
     }
 
-    if (showReminders) {
+    if (
+        showReminders
+    ) {
 
         ReminderDialog(
             reminders =
                 reminders,
 
             onDismiss = {
+
                 showReminders = false
             }
         )
@@ -542,7 +570,9 @@ private fun MetricCard(
     Card(
         modifier =
             modifier
-                .height(150.dp)
+                .height(
+                    150.dp
+                )
                 .clickable {
                     onClick()
                 },
@@ -694,7 +724,9 @@ private fun PlannerTitleDialog(
                     ) {
 
                         Icon(
-                            Icons.Default.Close,
+                            imageVector =
+                                Icons.Default.Close,
+
                             contentDescription =
                                 "Close",
 
@@ -730,7 +762,9 @@ private fun PlannerTitleDialog(
                     ) {
 
                         Text(
-                            "No items",
+                            text =
+                                "No items",
+
                             color =
                                 textColor.copy(
                                     alpha =
@@ -806,7 +840,11 @@ private fun PlannerTitleDialog(
                                     )
 
                                     Icon(
-                                        Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                        imageVector =
+                                            Icons
+                                                .AutoMirrored
+                                                .Filled
+                                                .ArrowForwardIos,
 
                                         contentDescription =
                                             null,
@@ -888,8 +926,10 @@ private fun PlannerDetailDialog(
                     Text(
                         text =
                             if (
-                                item.itemType ==
-                                "project"
+                                item.itemType.equals(
+                                    "project",
+                                    ignoreCase = true
+                                )
                             ) {
                                 "Project details"
                             } else {
@@ -912,7 +952,9 @@ private fun PlannerDetailDialog(
                     ) {
 
                         Icon(
-                            Icons.Default.Close,
+                            imageVector =
+                                Icons.Default.Close,
+
                             contentDescription =
                                 "Close",
 
@@ -955,25 +997,38 @@ private fun PlannerDetailDialog(
                     ) {
 
                         DetailLine(
-                            "Title",
-                            item.title
+                            label =
+                                "Title",
+
+                            value =
+                                item.title
                         )
 
                         DetailLine(
-                            "Description",
-                            item.description.ifBlank {
-                                "—"
-                            }
+                            label =
+                                "Description",
+
+                            value =
+                                item.description
+                                    .ifBlank {
+                                        "—"
+                                    }
                         )
 
                         DetailLine(
-                            "Due date",
-                            item.dueAt
+                            label =
+                                "Due date",
+
+                            value =
+                                item.dueAt
                         )
 
                         DetailLine(
-                            "Status",
-                            item.status
+                            label =
+                                "Status",
+
+                            value =
+                                item.status
                         )
                     }
                 }
@@ -987,7 +1042,12 @@ private fun DetailLine(
     label: String,
     value: String
 ) {
-    Column {
+    Column(
+        verticalArrangement =
+            Arrangement.spacedBy(
+                2.dp
+            )
+    ) {
 
         Text(
             text =
@@ -1015,25 +1075,8 @@ private fun ReminderDialog(
     reminders: List<PlannerReminder>,
     onDismiss: () -> Unit
 ) {
-    val isDark =
-        MaterialTheme
-            .colorScheme
-            .background
-            .luminance() < 0.5f
-
-    val dialogColor =
-        if (isDark) {
-            Color(0xFF1E1E1E)
-        } else {
-            Color.White
-        }
-
-    val textColor =
-        if (isDark) {
-            Color(0xFFE0E0E0)
-        } else {
-            Color.Black
-        }
+    val colorScheme =
+        MaterialTheme.colorScheme
 
     Dialog(
         onDismissRequest =
@@ -1041,21 +1084,24 @@ private fun ReminderDialog(
     ) {
 
         Surface(
-            shape =
-                RoundedCornerShape(
-                    24.dp
-                ),
-
-            color =
-                dialogColor,
-
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .heightIn(
                         min = 300.dp,
                         max = 540.dp
-                    )
+                    ),
+
+            shape =
+                RoundedCornerShape(
+                    24.dp
+                ),
+
+            color =
+                colorScheme.surface,
+
+            tonalElevation =
+                8.dp
         ) {
 
             Column(
@@ -1087,7 +1133,7 @@ private fun ReminderDialog(
                             FontWeight.Bold,
 
                         color =
-                            textColor
+                            colorScheme.onSurface
                     )
 
                     IconButton(
@@ -1096,17 +1142,22 @@ private fun ReminderDialog(
                     ) {
 
                         Icon(
-                            Icons.Default.Close,
+                            imageVector =
+                                Icons.Default.Close,
+
                             contentDescription =
                                 "Close",
 
                             tint =
-                                textColor
+                                colorScheme.onSurface
                         )
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(
+                    color =
+                        colorScheme.outlineVariant
+                )
 
                 Spacer(
                     modifier =
@@ -1136,16 +1187,17 @@ private fun ReminderDialog(
                                 "No upcoming reminders",
 
                             color =
-                                textColor.copy(
-                                    alpha =
-                                        0.65f
-                                )
+                                colorScheme
+                                    .onSurfaceVariant
                         )
                     }
 
                 } else {
 
                     LazyColumn(
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
                         verticalArrangement =
                             Arrangement.spacedBy(
                                 10.dp
@@ -1153,7 +1205,9 @@ private fun ReminderDialog(
                     ) {
 
                         items(
-                            reminders,
+                            items =
+                                reminders,
+
                             key = {
                                 it.item.id
                             }
@@ -1161,18 +1215,27 @@ private fun ReminderDialog(
 
                             Card(
                                 modifier =
-                                    Modifier.fillMaxWidth(),
+                                    Modifier
+                                        .fillMaxWidth(),
 
                                 shape =
                                     RoundedCornerShape(
-                                        12.dp
-                                    )
+                                        14.dp
+                                    ),
+
+                                colors =
+                                    CardDefaults
+                                        .cardColors(
+                                            containerColor =
+                                                colorScheme
+                                                    .primary
+                                        )
                             ) {
 
                                 Column(
                                     modifier =
                                         Modifier.padding(
-                                            12.dp
+                                            14.dp
                                         )
                                 ) {
 
@@ -1182,20 +1245,21 @@ private fun ReminderDialog(
                                                 .item
                                                 .title,
 
+                                        fontSize =
+                                            16.sp,
+
                                         fontWeight =
                                             FontWeight.Bold,
 
-                                        fontSize =
-                                            15.sp,
-
                                         color =
-                                            textColor
+                                            colorScheme
+                                                .onPrimary
                                     )
 
                                     Spacer(
                                         modifier =
                                             Modifier.height(
-                                                4.dp
+                                                5.dp
                                             )
                                     )
 
@@ -1207,10 +1271,12 @@ private fun ReminderDialog(
                                             13.sp,
 
                                         color =
-                                            textColor.copy(
-                                                alpha =
-                                                    0.8f
-                                            )
+                                            colorScheme
+                                                .onPrimary
+                                                .copy(
+                                                    alpha =
+                                                        0.85f
+                                                )
                                     )
                                 }
                             }
@@ -1226,16 +1292,10 @@ private fun plannerReminders(
     items: List<PlannerItem>
 ): List<PlannerReminder> {
 
-    val formatter =
-        DateTimeFormatter.ofPattern(
-            "dd MMMM yyyy, HH:mm",
-            Locale.ENGLISH
-        )
-
     val now =
         System.currentTimeMillis()
 
-    val oneDay =
+    val oneDayMillis =
         24 * 60 * 60 * 1000L
 
     return items
@@ -1258,7 +1318,7 @@ private fun plannerReminders(
                     LocalDateTime
                         .parse(
                             item.dueAt,
-                            formatter
+                            plannerDateFormatter
                         )
                         .atZone(
                             ZoneId.systemDefault()
@@ -1266,16 +1326,19 @@ private fun plannerReminders(
                         .toInstant()
                         .toEpochMilli()
 
-                val diff =
+                val difference =
                     dueMillis - now
 
                 if (
-                    diff in 1..oneDay
+                    difference > 0 &&
+                    difference <=
+                    oneDayMillis
                 ) {
 
                     val totalMinutes =
                         (
-                                diff + 59_999L
+                                difference +
+                                        59_999L
                                 ) / 60_000L
 
                     val hours =
@@ -1297,15 +1360,28 @@ private fun plannerReminders(
                                 "Due in less than 1 minute"
                         }
 
+                    val typeLabel =
+                        if (
+                            item.itemType.equals(
+                                "project",
+                                ignoreCase = true
+                            )
+                        ) {
+                            "Project"
+                        } else {
+                            "Task"
+                        }
+
                     PlannerReminder(
                         item =
                             item,
 
                         message =
-                            message
+                            "$typeLabel • $message"
                     )
 
                 } else {
+
                     null
                 }
 
@@ -1316,27 +1392,10 @@ private fun plannerReminders(
                 null
             }
         }
-        .sortedBy { reminder ->
-
-            try {
-
-                LocalDateTime
-                    .parse(
-                        reminder.item.dueAt,
-                        formatter
-                    )
-                    .atZone(
-                        ZoneId.systemDefault()
-                    )
-                    .toInstant()
-                    .toEpochMilli()
-
-            } catch (
-                _: Exception
-            ) {
-
-                Long.MAX_VALUE
-            }
+        .sortedBy {
+            dueDateMillis(
+                it.item.dueAt
+            )
         }
 }
 
@@ -1346,16 +1405,10 @@ private fun dueDateMillis(
 
     return try {
 
-        val formatter =
-            DateTimeFormatter.ofPattern(
-                "dd MMMM yyyy, HH:mm",
-                Locale.ENGLISH
-            )
-
         LocalDateTime
             .parse(
                 dueAt,
-                formatter
+                plannerDateFormatter
             )
             .atZone(
                 ZoneId.systemDefault()

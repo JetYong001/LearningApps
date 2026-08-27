@@ -28,6 +28,13 @@ class PlannerViewModel : ViewModel() {
     val items: StateFlow<List<PlannerItem>> =
         _items.asStateFlow()
 
+    private val _readReminderIds =
+        MutableStateFlow<Set<String>>(emptySet())
+
+    val readReminderIds:
+            StateFlow<Set<String>> =
+        _readReminderIds.asStateFlow()
+
     private var loadedUserId: String? = null
     private var firstLoadCompleted = false
 
@@ -45,7 +52,10 @@ class PlannerViewModel : ViewModel() {
         forceRefresh: Boolean = false
     ) {
         val currentUserId =
-            supabase.auth.currentUserOrNull()?.id
+            supabase
+                .auth
+                .currentUserOrNull()
+                ?.id
                 ?: return
 
         if (
@@ -57,10 +67,15 @@ class PlannerViewModel : ViewModel() {
         }
 
         try {
+
             val result =
-                withContext(Dispatchers.IO) {
+                withContext(
+                    Dispatchers.IO
+                ) {
                     supabase
-                        .from("planner_items")
+                        .from(
+                            "planner_items"
+                        )
                         .select {
                             filter {
                                 eq(
@@ -72,7 +87,8 @@ class PlannerViewModel : ViewModel() {
                         .decodeList<PlannerItem>()
                 }
 
-            _items.value = result
+            _items.value =
+                result
 
             loadedUserId =
                 currentUserId
@@ -85,6 +101,7 @@ class PlannerViewModel : ViewModel() {
             )
 
         } catch (e: Exception) {
+
             e.printStackTrace()
         }
     }
@@ -115,18 +132,27 @@ class PlannerViewModel : ViewModel() {
                         )
             }
 
-        if (missedItems.isEmpty()) {
+        if (
+            missedItems.isEmpty()
+        ) {
             return
         }
 
-        withContext(Dispatchers.IO) {
+        val successfullyUpdatedIds =
+            mutableSetOf<String>()
+
+        withContext(
+            Dispatchers.IO
+        ) {
 
             missedItems.forEach { item ->
 
                 try {
 
                     supabase
-                        .from("planner_items")
+                        .from(
+                            "planner_items"
+                        )
                         .update(
                             {
                                 set(
@@ -136,6 +162,7 @@ class PlannerViewModel : ViewModel() {
                             }
                         ) {
                             filter {
+
                                 eq(
                                     "id",
                                     item.id
@@ -148,22 +175,29 @@ class PlannerViewModel : ViewModel() {
                             }
                         }
 
+                    successfullyUpdatedIds.add(
+                        item.id
+                    )
+
                 } catch (e: Exception) {
+
                     e.printStackTrace()
                 }
             }
         }
 
-        val missedIds =
-            missedItems
-                .map { it.id }
-                .toSet()
+        if (
+            successfullyUpdatedIds.isEmpty()
+        ) {
+            return
+        }
 
         _items.value =
             currentItems.map { item ->
 
                 if (
-                    item.id in missedIds
+                    item.id in
+                    successfullyUpdatedIds
                 ) {
                     item.copy(
                         status = "Missed"
@@ -194,7 +228,8 @@ class PlannerViewModel : ViewModel() {
 
                         if (
                             firstLoadCompleted &&
-                            loadedUserId == currentUserId
+                            loadedUserId ==
+                            currentUserId
                         ) {
 
                             checkAndUpdateMissedItems(
@@ -210,10 +245,13 @@ class PlannerViewModel : ViewModel() {
                     }
 
                 } catch (e: Exception) {
+
                     e.printStackTrace()
                 }
 
-                delay(30_000L)
+                delay(
+                    30_000L
+                )
             }
         }
     }
@@ -223,12 +261,18 @@ class PlannerViewModel : ViewModel() {
     ) {
         if (
             !forceRefresh &&
-            firstLoadCompleted
+            firstLoadCompleted &&
+            loadedUserId ==
+            supabase
+                .auth
+                .currentUserOrNull()
+                ?.id
         ) {
             return
         }
 
         viewModelScope.launch {
+
             loadItemsAwait(
                 forceRefresh
             )
@@ -243,6 +287,27 @@ class PlannerViewModel : ViewModel() {
                 forceRefresh = true
             )
         }
+    }
+
+    fun markRemindersAsRead(
+        items: List<PlannerItem>
+    ) {
+        if (
+            items.isEmpty()
+        ) {
+            return
+        }
+
+        _readReminderIds.value =
+            _readReminderIds.value +
+                    items.map {
+                        it.id
+                    }
+    }
+
+    fun clearReadReminderIds() {
+        _readReminderIds.value =
+            emptySet()
     }
 
     fun saveItem(
@@ -312,7 +377,9 @@ class PlannerViewModel : ViewModel() {
                 if (isNew) {
 
                     supabase
-                        .from("planner_items")
+                        .from(
+                            "planner_items"
+                        )
                         .insert(
                             savedItem
                         )
@@ -320,7 +387,9 @@ class PlannerViewModel : ViewModel() {
                 } else {
 
                     supabase
-                        .from("planner_items")
+                        .from(
+                            "planner_items"
+                        )
                         .update(
                             {
 
@@ -407,7 +476,9 @@ class PlannerViewModel : ViewModel() {
             try {
 
                 supabase
-                    .from("planner_items")
+                    .from(
+                        "planner_items"
+                    )
                     .delete {
 
                         filter {

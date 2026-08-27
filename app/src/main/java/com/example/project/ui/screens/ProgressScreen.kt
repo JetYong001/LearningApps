@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -32,38 +33,51 @@ fun ProgressScreen(
     viewModel: ProgressViewModel,
     profileViewModel: ProfileViewModel
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val profile by profileViewModel.profile.collectAsState()
+    val uiState by
+    viewModel.uiState.collectAsState()
 
-    var showStreakInfo by remember {
+    val profile by
+    profileViewModel.profile.collectAsState()
+
+    var showStreakInfo by
+    remember {
         mutableStateOf(false)
     }
 
     val lifecycleOwner =
         LocalLifecycleOwner.current
 
-    var firstResume by remember {
+    var firstResume by
+    remember {
         mutableStateOf(true)
     }
 
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(
+        lifecycleOwner
+    ) {
 
         val observer =
             LifecycleEventObserver { _, event ->
 
                 if (
-                    event == Lifecycle.Event.ON_RESUME
+                    event ==
+                    Lifecycle.Event.ON_RESUME
                 ) {
 
-                    if (firstResume) {
+                    if (
+                        firstResume
+                    ) {
 
-                        firstResume = false
+                        firstResume =
+                            false
 
-                        profileViewModel.loadProfile()
+                        profileViewModel
+                            .loadProfile()
 
-                        viewModel.loadProgressData(
-                            forceRefresh = true
-                        )
+                        viewModel
+                            .loadProgressData(
+                                forceRefresh = true
+                            )
 
                     } else {
 
@@ -76,46 +90,70 @@ fun ProgressScreen(
                 }
             }
 
-        lifecycleOwner.lifecycle.addObserver(observer)
+        lifecycleOwner
+            .lifecycle
+            .addObserver(
+                observer
+            )
 
         onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+
+            lifecycleOwner
+                .lifecycle
+                .removeObserver(
+                    observer
+                )
         }
     }
 
     val background =
-        MaterialTheme.colorScheme.background
+        MaterialTheme
+            .colorScheme
+            .background
 
     val surface =
-        MaterialTheme.colorScheme.surface
+        MaterialTheme
+            .colorScheme
+            .surface
 
     val onSurface =
-        MaterialTheme.colorScheme.onSurface
+        MaterialTheme
+            .colorScheme
+            .onSurface
 
     val onSurfaceVariant =
-        MaterialTheme.colorScheme.onSurfaceVariant
+        MaterialTheme
+            .colorScheme
+            .onSurfaceVariant
 
     val onPrimary =
-        MaterialTheme.colorScheme.onPrimary
+        MaterialTheme
+            .colorScheme
+            .onPrimary
 
     BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(background)
+                .background(
+                    background
+                )
     ) {
 
         val fixedHeight =
             514.dp
 
         val consistencyHeight =
-            (maxHeight - fixedHeight)
-                .coerceAtLeast(180.dp)
+            (
+                    maxHeight -
+                            fixedHeight
+                    ).coerceAtLeast(
+                    180.dp
+                )
 
         LazyColumn(
             modifier =
-                Modifier
-                    .fillMaxSize(),
+                Modifier.fillMaxSize(),
 
             verticalArrangement =
                 Arrangement.spacedBy(
@@ -143,6 +181,7 @@ fun ProgressScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
+
                                     navController.navigate(
                                         Screen.Profile.route
                                     )
@@ -159,12 +198,14 @@ fun ProgressScreen(
                                     ?: uiState.userName,
 
                             profilePicture =
-                                profile?.profile_picture
+                                profile
+                                    ?.profile_picture
                         )
                     }
 
                     IconButton(
                         onClick = {
+
                             navController.navigate(
                                 Screen.Settings.route
                             )
@@ -245,7 +286,9 @@ fun ProgressScreen(
                         onSurfaceVariant,
 
                     onClick = {
-                        showStreakInfo = true
+
+                        showStreakInfo =
+                            true
                     }
                 )
             }
@@ -284,64 +327,15 @@ fun ProgressScreen(
         }
     }
 
-    if (showStreakInfo) {
+    if (
+        showStreakInfo
+    ) {
 
-        AlertDialog(
-            onDismissRequest = {
-                showStreakInfo = false
-            },
+        StudyStreakDialog(
+            onDismiss = {
 
-            shape =
-                RoundedCornerShape(24.dp),
-
-            title = {
-
-                Text(
-                    text =
-                        "Study Streak",
-
-                    fontWeight =
-                        FontWeight.Bold
-                )
-            },
-
-            text = {
-
-                Column(
-                    verticalArrangement =
-                        Arrangement.spacedBy(
-                            10.dp
-                        )
-                ) {
-
-                    Text(
-                        text =
-                            "Your study streak increases when you study for at least 5 minutes in a day."
-                    )
-
-                    Text(
-                        text =
-                            "4 minutes → does not count\n" +
-                                    "5 minutes → counts as 1 day\n" +
-                                    "30 minutes → counts as 1 day"
-                    )
-
-                    Text(
-                        text =
-                            "Study at least 5 minutes each day to keep your streak going."
-                    )
-                }
-            },
-
-            confirmButton = {
-
-                TextButton(
-                    onClick = {
-                        showStreakInfo = false
-                    }
-                ) {
-                    Text("Got it")
-                }
+                showStreakInfo =
+                    false
             }
         )
     }
@@ -355,16 +349,26 @@ private fun OverallCard(
     onSurfaceVariant: Color
 ) {
     val percentage =
-        (progress.coerceIn(0f, 1f) * 100).toInt()
+        (
+                progress
+                    .coerceIn(
+                        0f,
+                        1f
+                    ) * 100
+                ).toInt()
 
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(145.dp),
+                .height(
+                    145.dp
+                ),
 
         shape =
-            RoundedCornerShape(26.dp),
+            RoundedCornerShape(
+                26.dp
+            ),
 
         colors =
             CardDefaults.cardColors(
@@ -374,7 +378,8 @@ private fun OverallCard(
 
         elevation =
             CardDefaults.cardElevation(
-                defaultElevation = 3.dp
+                defaultElevation =
+                    3.dp
             )
     ) {
 
@@ -393,7 +398,9 @@ private fun OverallCard(
 
             Box(
                 modifier =
-                    Modifier.size(116.dp),
+                    Modifier.size(
+                        116.dp
+                    ),
 
                 contentAlignment =
                     Alignment.Center
@@ -413,12 +420,16 @@ private fun OverallCard(
 
             Spacer(
                 modifier =
-                    Modifier.width(18.dp)
+                    Modifier.width(
+                        18.dp
+                    )
             )
 
             Column(
                 modifier =
-                    Modifier.weight(1f)
+                    Modifier.weight(
+                        1f
+                    )
             ) {
 
                 Text(
@@ -437,7 +448,9 @@ private fun OverallCard(
 
                 Spacer(
                     modifier =
-                        Modifier.height(2.dp)
+                        Modifier.height(
+                            2.dp
+                        )
                 )
 
                 Text(
@@ -456,7 +469,9 @@ private fun OverallCard(
 
                 Spacer(
                     modifier =
-                        Modifier.height(2.dp)
+                        Modifier.height(
+                            2.dp
+                        )
                 )
 
                 Text(
@@ -491,14 +506,18 @@ private fun StudyStreakCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(80.dp)
+                .height(
+                    80.dp
+                )
                 .clickable(
                     onClick =
                         onClick
                 ),
 
         shape =
-            RoundedCornerShape(22.dp),
+            RoundedCornerShape(
+                22.dp
+            ),
 
         colors =
             CardDefaults.cardColors(
@@ -508,7 +527,8 @@ private fun StudyStreakCard(
 
         elevation =
             CardDefaults.cardElevation(
-                defaultElevation = 2.dp
+                defaultElevation =
+                    2.dp
             )
     ) {
 
@@ -534,7 +554,9 @@ private fun StudyStreakCard(
 
             Spacer(
                 modifier =
-                    Modifier.width(12.dp)
+                    Modifier.width(
+                        12.dp
+                    )
             )
 
             Text(
@@ -553,7 +575,9 @@ private fun StudyStreakCard(
 
             Spacer(
                 modifier =
-                    Modifier.width(8.dp)
+                    Modifier.width(
+                        8.dp
+                    )
             )
 
             Text(
@@ -567,6 +591,281 @@ private fun StudyStreakCard(
                     onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+private fun StudyStreakDialog(
+    onDismiss: () -> Unit
+) {
+    val surface =
+        MaterialTheme
+            .colorScheme
+            .surface
+
+    val onSurface =
+        MaterialTheme
+            .colorScheme
+            .onSurface
+
+    val onSurfaceVariant =
+        MaterialTheme
+            .colorScheme
+            .onSurfaceVariant
+
+    val primary =
+        MaterialTheme
+            .colorScheme
+            .primary
+
+    val onPrimary =
+        MaterialTheme
+            .colorScheme
+            .onPrimary
+
+    Dialog(
+        onDismissRequest =
+            onDismiss
+    ) {
+
+        Surface(
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    28.dp
+                ),
+
+            color =
+                surface,
+
+            tonalElevation =
+                8.dp
+        ) {
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            20.dp
+                        )
+            ) {
+
+                Text(
+                    text =
+                        "Study Streak",
+
+                    fontSize =
+                        24.sp,
+
+                    fontWeight =
+                        FontWeight.Bold,
+
+                    color =
+                        onSurface
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            8.dp
+                        )
+                )
+
+                Text(
+                    text =
+                        "Your study streak is based on your daily study time.",
+
+                    fontSize =
+                        14.sp,
+
+                    lineHeight =
+                        20.sp,
+
+                    color =
+                        onSurfaceVariant
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            18.dp
+                        )
+                )
+
+                Surface(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    shape =
+                        RoundedCornerShape(
+                            18.dp
+                        ),
+
+                    color =
+                        primary
+                ) {
+
+                    Column(
+                        modifier =
+                            Modifier.padding(
+                                16.dp
+                            ),
+
+                        verticalArrangement =
+                            Arrangement.spacedBy(
+                                12.dp
+                            )
+                    ) {
+
+                        Text(
+                            text =
+                                "Conditions",
+
+                            fontSize =
+                                16.sp,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            color =
+                                onPrimary
+                        )
+
+                        StreakConditionRow(
+                            time =
+                                "Less than 5 minutes",
+
+                            result =
+                                "Does not count",
+
+                            textColor =
+                                onPrimary
+                        )
+
+                        StreakConditionRow(
+                            time =
+                                "5 minutes or more",
+
+                            result =
+                                "Counts as 1 day",
+
+                            textColor =
+                                onPrimary
+                        )
+                    }
+                }
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            14.dp
+                        )
+                )
+
+                Text(
+                    text =
+                        "Study for at least 5 minutes in a day to maintain your streak.",
+
+                    fontSize =
+                        13.sp,
+
+                    lineHeight =
+                        18.sp,
+
+                    color =
+                        onSurfaceVariant
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            18.dp
+                        )
+                )
+
+                Button(
+                    onClick =
+                        onDismiss,
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                50.dp
+                            ),
+
+                    shape =
+                        RoundedCornerShape(
+                            14.dp
+                        ),
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor =
+                                primary,
+
+                            contentColor =
+                                onPrimary
+                        )
+                ) {
+
+                    Text(
+                        text =
+                            "Got it",
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StreakConditionRow(
+    time: String,
+    result: String,
+    textColor: Color
+) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        horizontalArrangement =
+            Arrangement.SpaceBetween,
+
+        verticalAlignment =
+            Alignment.CenterVertically
+    ) {
+
+        Text(
+            text =
+                time,
+
+            fontSize =
+                13.sp,
+
+            color =
+                textColor
+        )
+
+        Text(
+            text =
+                result,
+
+            fontSize =
+                13.sp,
+
+            fontWeight =
+                FontWeight.SemiBold,
+
+            color =
+                textColor
+        )
     }
 }
 
