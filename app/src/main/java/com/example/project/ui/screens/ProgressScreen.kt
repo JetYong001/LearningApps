@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,146 +98,189 @@ fun ProgressScreen(
     val onPrimary =
         MaterialTheme.colorScheme.onPrimary
 
-    LazyColumn(
+    BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(background),
-        verticalArrangement =
-            Arrangement.spacedBy(14.dp),
-        contentPadding =
-            PaddingValues(
-                horizontal = 16.dp,
-                vertical = 10.dp
-            )
+                .background(background)
     ) {
 
-        item {
+        val fixedHeight =
+            514.dp
 
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-            ) {
+        val consistencyHeight =
+            (maxHeight - fixedHeight)
+                .coerceAtLeast(180.dp)
+
+        LazyColumn(
+            modifier =
+                Modifier
+                    .fillMaxSize(),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    14.dp
+                ),
+
+            contentPadding =
+                PaddingValues(
+                    start = 16.dp,
+                    top = 10.dp,
+                    end = 16.dp,
+                    bottom = 24.dp
+                )
+        ) {
+
+            item {
 
                 Box(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                navController.navigate(
-                                    Screen.Profile.route
-                                )
-                            }
+                        Modifier.fillMaxWidth()
                 ) {
 
-                    HeaderCard(
-                        userName =
-                            profile
-                                ?.username
-                                ?.takeIf {
-                                    it.isNotBlank()
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    navController.navigate(
+                                        Screen.Profile.route
+                                    )
                                 }
-                                ?: uiState.userName,
+                    ) {
 
-                        profilePicture =
-                            profile?.profile_picture
-                    )
-                }
+                        HeaderCard(
+                            userName =
+                                profile
+                                    ?.username
+                                    ?.takeIf {
+                                        it.isNotBlank()
+                                    }
+                                    ?: uiState.userName,
 
-                IconButton(
-                    onClick = {
-                        navController.navigate(
-                            Screen.Settings.route
+                            profilePicture =
+                                profile?.profile_picture
                         )
-                    },
-                    modifier =
-                        Modifier
-                            .align(
-                                Alignment.TopEnd
-                            )
-                            .padding(
-                                top = 6.dp,
-                                end = 6.dp
-                            )
-                ) {
+                    }
 
-                    Icon(
-                        imageVector =
-                            Icons.Default.Settings,
-                        contentDescription =
-                            "Settings",
-                        tint =
-                            onPrimary
-                    )
+                    IconButton(
+                        onClick = {
+                            navController.navigate(
+                                Screen.Settings.route
+                            )
+                        },
+
+                        modifier =
+                            Modifier
+                                .align(
+                                    Alignment.TopEnd
+                                )
+                                .padding(
+                                    top = 6.dp,
+                                    end = 6.dp
+                                )
+                    ) {
+
+                        Icon(
+                            imageVector =
+                                Icons.Default.Settings,
+
+                            contentDescription =
+                                "Settings",
+
+                            tint =
+                                onPrimary
+                        )
+                    }
                 }
             }
-        }
 
-        item {
+            item {
 
-            Text(
-                text = "Your Progress",
-                fontSize = 22.sp,
-                fontWeight =
-                    FontWeight.Bold,
-                color =
-                    onSurface
-            )
-        }
+                Text(
+                    text =
+                        "Your Progress",
 
-        item {
+                    fontSize =
+                        22.sp,
 
-            OverallCard(
-                progress =
-                    uiState.overallProgress,
-                surface =
-                    surface,
-                onSurface =
-                    onSurface,
-                onSurfaceVariant =
-                    onSurfaceVariant
-            )
-        }
+                    fontWeight =
+                        FontWeight.Bold,
 
-        item {
+                    color =
+                        onSurface
+                )
+            }
 
-            StudyStreakCard(
-                streak =
-                    uiState.studyStreak,
-                surface =
-                    surface,
-                onSurface =
-                    onSurface,
-                onSurfaceVariant =
-                    onSurfaceVariant,
-                onClick = {
-                    showStreakInfo = true
-                }
-            )
-        }
+            item {
 
-        item {
+                OverallCard(
+                    progress =
+                        uiState.overallProgress,
 
-            Text(
-                text = "Study Consistency",
-                fontSize = 18.sp,
-                fontWeight =
-                    FontWeight.Bold,
-                color =
-                    onSurface
-            )
-        }
+                    surface =
+                        surface,
 
-        item {
+                    onSurface =
+                        onSurface,
 
-            StudyConsistencyCard(
-                sessions =
-                    uiState.studySessions,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(430.dp)
-            )
+                    onSurfaceVariant =
+                        onSurfaceVariant
+                )
+            }
+
+            item {
+
+                StudyStreakCard(
+                    streak =
+                        uiState.studyStreak,
+
+                    surface =
+                        surface,
+
+                    onSurface =
+                        onSurface,
+
+                    onSurfaceVariant =
+                        onSurfaceVariant,
+
+                    onClick = {
+                        showStreakInfo = true
+                    }
+                )
+            }
+
+            item {
+
+                Text(
+                    text =
+                        "Study Consistency",
+
+                    fontSize =
+                        18.sp,
+
+                    fontWeight =
+                        FontWeight.Bold,
+
+                    color =
+                        onSurface
+                )
+            }
+
+            item {
+
+                StudyConsistencyCard(
+                    sessions =
+                        uiState.studySessions,
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                consistencyHeight
+                            )
+                )
+            }
         }
     }
 
@@ -246,21 +290,28 @@ fun ProgressScreen(
             onDismissRequest = {
                 showStreakInfo = false
             },
+
             shape =
                 RoundedCornerShape(24.dp),
+
             title = {
 
                 Text(
-                    text = "Study Streak",
+                    text =
+                        "Study Streak",
+
                     fontWeight =
                         FontWeight.Bold
                 )
             },
+
             text = {
 
                 Column(
                     verticalArrangement =
-                        Arrangement.spacedBy(10.dp)
+                        Arrangement.spacedBy(
+                            10.dp
+                        )
                 ) {
 
                     Text(
@@ -281,6 +332,7 @@ fun ProgressScreen(
                     )
                 }
             },
+
             confirmButton = {
 
                 TextButton(
@@ -298,9 +350,9 @@ fun ProgressScreen(
 @Composable
 private fun OverallCard(
     progress: Float,
-    surface: androidx.compose.ui.graphics.Color,
-    onSurface: androidx.compose.ui.graphics.Color,
-    onSurfaceVariant: androidx.compose.ui.graphics.Color
+    surface: Color,
+    onSurface: Color,
+    onSurfaceVariant: Color
 ) {
     val percentage =
         (progress.coerceIn(0f, 1f) * 100).toInt()
@@ -310,13 +362,16 @@ private fun OverallCard(
             Modifier
                 .fillMaxWidth()
                 .height(145.dp),
+
         shape =
             RoundedCornerShape(26.dp),
+
         colors =
             CardDefaults.cardColors(
                 containerColor =
                     surface
             ),
+
         elevation =
             CardDefaults.cardElevation(
                 defaultElevation = 3.dp
@@ -331,6 +386,7 @@ private fun OverallCard(
                         horizontal = 18.dp,
                         vertical = 12.dp
                     ),
+
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
@@ -338,6 +394,7 @@ private fun OverallCard(
             Box(
                 modifier =
                     Modifier.size(116.dp),
+
                 contentAlignment =
                     Alignment.Center
             ) {
@@ -345,8 +402,10 @@ private fun OverallCard(
                 ProgressRing(
                     progress =
                         progress,
+
                     size =
                         102.dp,
+
                     strokeWidth =
                         11.dp
                 )
@@ -365,9 +424,13 @@ private fun OverallCard(
                 Text(
                     text =
                         "Overall Progress",
-                    fontSize = 13.sp,
+
+                    fontSize =
+                        13.sp,
+
                     fontWeight =
                         FontWeight.SemiBold,
+
                     color =
                         onSurfaceVariant
                 )
@@ -380,9 +443,13 @@ private fun OverallCard(
                 Text(
                     text =
                         "$percentage%",
-                    fontSize = 32.sp,
+
+                    fontSize =
+                        32.sp,
+
                     fontWeight =
                         FontWeight.ExtraBold,
+
                     color =
                         onSurface
                 )
@@ -397,8 +464,13 @@ private fun OverallCard(
                         progressMessage(
                             percentage
                         ),
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
+
+                    fontSize =
+                        11.sp,
+
+                    lineHeight =
+                        15.sp,
+
                     color =
                         onSurfaceVariant
                 )
@@ -410,26 +482,30 @@ private fun OverallCard(
 @Composable
 private fun StudyStreakCard(
     streak: Int,
-    surface: androidx.compose.ui.graphics.Color,
-    onSurface: androidx.compose.ui.graphics.Color,
-    onSurfaceVariant: androidx.compose.ui.graphics.Color,
+    surface: Color,
+    onSurface: Color,
+    onSurfaceVariant: Color,
     onClick: () -> Unit
 ) {
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(86.dp)
+                .height(80.dp)
                 .clickable(
-                    onClick = onClick
+                    onClick =
+                        onClick
                 ),
+
         shape =
             RoundedCornerShape(22.dp),
+
         colors =
             CardDefaults.cardColors(
                 containerColor =
                     surface
             ),
+
         elevation =
             CardDefaults.cardElevation(
                 defaultElevation = 2.dp
@@ -443,13 +519,17 @@ private fun StudyStreakCard(
                     .padding(
                         horizontal = 18.dp
                     ),
+
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
 
             Text(
-                text = "🔥",
-                fontSize = 34.sp
+                text =
+                    "🔥",
+
+                fontSize =
+                    24.sp
             )
 
             Spacer(
@@ -460,21 +540,29 @@ private fun StudyStreakCard(
             Text(
                 text =
                     "$streak",
-                fontSize = 34.sp,
+
+                fontSize =
+                    28.sp,
+
                 fontWeight =
                     FontWeight.ExtraBold,
+
                 color =
                     onSurface
             )
 
             Spacer(
                 modifier =
-                    Modifier.width(7.dp)
+                    Modifier.width(8.dp)
             )
 
             Text(
-                text = "days",
-                fontSize = 12.sp,
+                text =
+                    "days",
+
+                fontSize =
+                    18.sp,
+
                 color =
                     onSurfaceVariant
             )

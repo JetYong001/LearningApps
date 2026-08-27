@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class FocusState {
     IDLE,
@@ -81,7 +82,7 @@ class DashboardViewModel : ViewModel() {
                             .now()
                             .format(formatter)
 
-                    delay(1000L)
+                    delay(1000L.milliseconds)
                 }
             }
     }
@@ -220,7 +221,7 @@ class DashboardViewModel : ViewModel() {
                     _uiState.value.focusState ==
                     FocusState.BREAK
                 ) {
-                    delay(1000L)
+                    delay(1000L.milliseconds)
 
                     when (
                         _uiState.value.focusState
@@ -375,6 +376,20 @@ class DashboardViewModel : ViewModel() {
     fun endAndSaveFocusSession() {
         stopFocusSession()
     }
+    fun exitFocusSession() {
+        timerJob?.cancel()
+        timerJob = null
+
+        _uiState.update {
+            it.copy(
+                focusState = FocusState.IDLE,
+                remainingSeconds = 0
+            )
+        }
+
+        resetFocusValues()
+    }
+
 
     private fun resetFocusValues() {
         remainingTotalFocusSeconds = 0

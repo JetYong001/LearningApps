@@ -3,7 +3,7 @@ package com.example.project.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
@@ -35,7 +35,7 @@ fun NoteDetailScreen(
 
     LaunchedEffect(noteId) {
         if (!isNewNote) {
-            val note = viewModel.getNoteById(noteId!!)
+            val note = viewModel.getNoteById(noteId)
 
             if (note != null) {
                 title = note.title
@@ -66,7 +66,7 @@ fun NoteDetailScreen(
                 }
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back"
                 )
             }

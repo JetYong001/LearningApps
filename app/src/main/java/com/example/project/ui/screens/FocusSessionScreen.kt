@@ -1,6 +1,7 @@
 package com.example.project.ui.screens
 
 import java.util.Locale
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -12,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,9 +39,15 @@ import kotlin.math.abs
 fun FocusSessionScreen(
     navController: NavController,
     viewModel: DashboardViewModel,
-    progressViewModel: com.example.project.viewmodel.ProgressViewModel = viewModel()
+    progressViewModel: com.example.project.viewmodel.ProgressViewModel =
+        viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by
+    viewModel.uiState.collectAsState()
+
+    var showExitDialog by remember {
+        mutableStateOf(false)
+    }
 
     var selectedHour by remember {
         mutableIntStateOf(0)
@@ -70,6 +78,7 @@ fun FocusSessionScreen(
     }
 
     val breakAfterOptions = remember {
+
         listOf(
             15 to "15 min",
             25 to "25 min",
@@ -82,6 +91,7 @@ fun FocusSessionScreen(
     }
 
     val breakDurationOptions = remember {
+
         listOf(
             5 to "5 min",
             10 to "10 min",
@@ -93,181 +103,321 @@ fun FocusSessionScreen(
 
     val selectedAfterText =
         remember(breakAfterMinute) {
+
             breakAfterOptions
-                .find { it.first == breakAfterMinute }
+                .find {
+                    it.first ==
+                            breakAfterMinute
+                }
                 ?.second
                 ?: "$breakAfterMinute min"
         }
 
     val selectedDurationText =
         remember(breakDurationMinute) {
+
             breakDurationOptions
-                .find { it.first == breakDurationMinute }
+                .find {
+                    it.first ==
+                            breakDurationMinute
+                }
                 ?.second
                 ?: "$breakDurationMinute min"
         }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                MaterialTheme.colorScheme.background
-            )
-            .padding(24.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    MaterialTheme
+                        .colorScheme
+                        .background
+                )
+                .padding(24.dp)
     ) {
 
         IconButton(
             onClick = {
-                navController.popBackStack()
+
+                if (
+                    uiState.focusState ==
+                    FocusState.IDLE
+                ) {
+
+                    navController.popBackStack()
+
+                } else {
+
+                    showExitDialog = true
+                }
             },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .background(
-                    MaterialTheme.colorScheme.surfaceVariant
-                        .copy(alpha = 0.6f),
-                    shape = CircleShape
-                )
+
+            modifier =
+                Modifier
+                    .align(
+                        Alignment.TopStart
+                    )
+                    .background(
+                        MaterialTheme
+                            .colorScheme
+                            .surfaceVariant
+                            .copy(
+                                alpha = 0.6f
+                            ),
+                        shape =
+                            CircleShape
+                    )
         ) {
+
             Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                imageVector =
+                    Icons.Default.Close,
+
+                contentDescription =
+                    "Close",
+
+                tint =
+                    MaterialTheme
+                        .colorScheme
+                        .onSurfaceVariant
             )
         }
 
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier.fillMaxSize(),
+
+            contentAlignment =
+                Alignment.Center
         ) {
 
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                horizontalAlignment =
+                    Alignment.CenterHorizontally,
+
+                verticalArrangement =
+                    Arrangement.Center,
+
+                modifier =
+                    Modifier.fillMaxWidth()
             ) {
 
-                if (uiState.focusState == FocusState.IDLE) {
+                if (
+                    uiState.focusState ==
+                    FocusState.IDLE
+                ) {
 
                     Text(
-                        text = "Focus Duration",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                            .copy(alpha = 0.7f),
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        text =
+                            "Focus Duration",
+
+                        fontSize =
+                            15.sp,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onBackground
+                                .copy(
+                                    alpha = 0.7f
+                                ),
+
+                        modifier =
+                            Modifier.padding(
+                                bottom = 8.dp
+                            )
                     )
 
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
+                        verticalAlignment =
+                            Alignment.CenterVertically,
+
+                        horizontalArrangement =
+                            Arrangement.Center,
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(150.dp)
                     ) {
 
                         WheelPicker(
                             count = 24,
-                            initialValue = selectedHour,
+
+                            initialValue =
+                                selectedHour,
+
                             onValueChange = {
                                 selectedHour = it
                             },
+
                             unitText = "hr"
                         )
 
                         Text(
                             text = ":",
+
                             fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(
-                                horizontal = 12.dp
-                            )
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onBackground,
+
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = 12.dp
+                                )
                         )
 
                         WheelPicker(
                             count = 60,
-                            initialValue = selectedMinute,
+
+                            initialValue =
+                                selectedMinute,
+
                             onValueChange = {
                                 selectedMinute = it
                             },
+
                             unitText = "min"
                         )
                     }
 
                     Spacer(
-                        modifier = Modifier.height(20.dp)
+                        modifier =
+                            Modifier.height(20.dp)
                     )
 
                     AnimatedVisibility(
-                        visible = !skipBreaks,
+                        visible =
+                            !skipBreaks,
+
                         enter =
-                            fadeIn() + expandVertically(),
+                            fadeIn() +
+                                    expandVertically(),
+
                         exit =
-                            fadeOut() + shrinkVertically()
+                            fadeOut() +
+                                    shrinkVertically()
                     ) {
 
                         Surface(
-                            modifier = Modifier
-                                .fillMaxWidth(0.92f)
-                                .clip(
-                                    RoundedCornerShape(16.dp)
-                                ),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth(0.92f)
+                                    .clip(
+                                        RoundedCornerShape(
+                                            16.dp
+                                        )
+                                    ),
+
                             color =
-                                MaterialTheme.colorScheme.surface,
-                            tonalElevation = 2.dp
+                                MaterialTheme
+                                    .colorScheme
+                                    .surface,
+
+                            tonalElevation =
+                                2.dp
                         ) {
 
                             Column(
-                                modifier = Modifier.padding(16.dp),
+                                modifier =
+                                    Modifier.padding(
+                                        16.dp
+                                    ),
+
                                 horizontalAlignment =
                                     Alignment.CenterHorizontally
                             ) {
 
                                 DropdownSelectorRow(
-                                    label = "Break after",
+                                    label =
+                                        "Break after",
+
                                     selectedValueText =
                                         selectedAfterText,
+
                                     isExpanded =
                                         isAfterExpanded,
+
                                     onToggle = {
+
                                         isAfterExpanded =
                                             !isAfterExpanded
 
-                                        if (isAfterExpanded) {
-                                            isDurationExpanded = false
+                                        if (
+                                            isAfterExpanded
+                                        ) {
+
+                                            isDurationExpanded =
+                                                false
                                         }
                                     },
+
                                     options =
                                         breakAfterOptions,
-                                    onOptionSelected = { minutes ->
-                                        breakAfterMinute = minutes
-                                        isAfterExpanded = false
+
+                                    onOptionSelected = {
+                                            minutes ->
+
+                                        breakAfterMinute =
+                                            minutes
+
+                                        isAfterExpanded =
+                                            false
                                     }
                                 )
 
                                 Spacer(
-                                    modifier = Modifier.height(12.dp)
+                                    modifier =
+                                        Modifier.height(
+                                            12.dp
+                                        )
                                 )
 
                                 DropdownSelectorRow(
-                                    label = "Break for",
+                                    label =
+                                        "Break for",
+
                                     selectedValueText =
                                         selectedDurationText,
+
                                     isExpanded =
                                         isDurationExpanded,
+
                                     onToggle = {
+
                                         isDurationExpanded =
                                             !isDurationExpanded
 
-                                        if (isDurationExpanded) {
-                                            isAfterExpanded = false
+                                        if (
+                                            isDurationExpanded
+                                        ) {
+
+                                            isAfterExpanded =
+                                                false
                                         }
                                     },
+
                                     options =
                                         breakDurationOptions,
-                                    onOptionSelected = { minutes ->
-                                        breakDurationMinute = minutes
-                                        isDurationExpanded = false
+
+                                    onOptionSelected = {
+                                            minutes ->
+
+                                        breakDurationMinute =
+                                            minutes
+
+                                        isDurationExpanded =
+                                            false
                                     }
                                 )
                             }
@@ -275,40 +425,59 @@ fun FocusSessionScreen(
                     }
 
                     Spacer(
-                        modifier = Modifier.height(12.dp)
+                        modifier =
+                            Modifier.height(12.dp)
                     )
 
                     Row(
                         verticalAlignment =
                             Alignment.CenterVertically,
-                        modifier = Modifier.padding(
-                            vertical = 4.dp
-                        )
+
+                        modifier =
+                            Modifier.padding(
+                                vertical = 4.dp
+                            )
                     ) {
 
                         Checkbox(
-                            checked = skipBreaks,
+                            checked =
+                                skipBreaks,
+
                             onCheckedChange = {
                                 skipBreaks = it
                             },
+
                             colors =
                                 CheckboxDefaults.colors(
                                     checkedColor =
-                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme
+                                            .colorScheme
+                                            .primary,
+
                                     uncheckedColor =
-                                        MaterialTheme.colorScheme
+                                        MaterialTheme
+                                            .colorScheme
                                             .onBackground
-                                            .copy(alpha = 0.6f)
+                                            .copy(
+                                                alpha = 0.6f
+                                            )
                                 )
                         )
 
                         Text(
-                            text = "Skip breaks",
-                            fontSize = 14.sp,
+                            text =
+                                "Skip breaks",
+
+                            fontSize =
+                                14.sp,
+
                             color =
-                                MaterialTheme.colorScheme
+                                MaterialTheme
+                                    .colorScheme
                                     .onBackground
-                                    .copy(alpha = 0.7f)
+                                    .copy(
+                                        alpha = 0.7f
+                                    )
                         )
                     }
 
@@ -317,13 +486,18 @@ fun FocusSessionScreen(
                     Column(
                         horizontalAlignment =
                             Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(
-                            vertical = 20.dp
-                        )
+
+                        modifier =
+                            Modifier.padding(
+                                vertical = 20.dp
+                            )
                     ) {
 
                         val titleText =
-                            when (uiState.focusState) {
+                            when (
+                                uiState.focusState
+                            ) {
+
                                 FocusState.FOCUSING ->
                                     "Focus Time"
 
@@ -338,81 +512,128 @@ fun FocusSessionScreen(
                             }
 
                         val titleColor =
-                            when (uiState.focusState) {
+                            when (
+                                uiState.focusState
+                            ) {
+
                                 FocusState.FOCUSING ->
-                                    MaterialTheme.colorScheme.primary
+                                    MaterialTheme
+                                        .colorScheme
+                                        .primary
 
                                 FocusState.BREAK ->
-                                    MaterialTheme.colorScheme.tertiary
+                                    MaterialTheme
+                                        .colorScheme
+                                        .tertiary
 
                                 FocusState.PAUSED ->
-                                    MaterialTheme.colorScheme.secondary
+                                    MaterialTheme
+                                        .colorScheme
+                                        .secondary
 
                                 else ->
-                                    MaterialTheme.colorScheme.primary
+                                    MaterialTheme
+                                        .colorScheme
+                                        .primary
                             }
 
                         Text(
-                            text = titleText,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = titleColor
+                            text =
+                                titleText,
+
+                            fontSize =
+                                20.sp,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            color =
+                                titleColor
                         )
 
                         Spacer(
-                            modifier = Modifier.height(16.dp)
+                            modifier =
+                                Modifier.height(16.dp)
                         )
 
                         val hrs =
-                            uiState.remainingSeconds / 3600
+                            uiState
+                                .remainingSeconds /
+                                    3600
 
                         val mins =
-                            (uiState.remainingSeconds % 3600) / 60
+                            (
+                                    uiState
+                                        .remainingSeconds %
+                                            3600
+                                    ) / 60
 
                         val secs =
-                            uiState.remainingSeconds % 60
+                            uiState
+                                .remainingSeconds %
+                                    60
 
                         Text(
-                            text = String.format(
-                                Locale.getDefault(),
-                                "%02d:%02d:%02d",
-                                hrs,
-                                mins,
-                                secs
-                            ),
-                            fontSize = 44.sp,
-                            fontWeight = FontWeight.Bold,
+                            text =
+                                String.format(
+                                    Locale.getDefault(),
+                                    "%02d:%02d:%02d",
+                                    hrs,
+                                    mins,
+                                    secs
+                                ),
+
+                            fontSize =
+                                44.sp,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
                             color =
-                                MaterialTheme.colorScheme.onBackground
+                                MaterialTheme
+                                    .colorScheme
+                                    .onBackground
                         )
 
                         if (
                             uiState.focusState ==
                             FocusState.BREAK
                         ) {
+
                             Spacer(
                                 modifier =
-                                    Modifier.height(8.dp)
+                                    Modifier.height(
+                                        8.dp
+                                    )
                             )
 
                             Text(
                                 text =
                                     "Your study timer is paused during break",
-                                fontSize = 13.sp,
+
+                                fontSize =
+                                    13.sp,
+
                                 color =
-                                    MaterialTheme.colorScheme
+                                    MaterialTheme
+                                        .colorScheme
                                         .onBackground
-                                        .copy(alpha = 0.6f)
+                                        .copy(
+                                            alpha = 0.6f
+                                        )
                             )
                         }
                     }
                 }
 
                 Spacer(
-                    modifier = Modifier.height(20.dp)
+                    modifier =
+                        Modifier.height(20.dp)
                 )
 
-                when (uiState.focusState) {
+                when (
+                    uiState.focusState
+                ) {
 
                     FocusState.IDLE -> {
 
@@ -427,24 +648,40 @@ fun FocusSessionScreen(
                                     skipBreaks
                                 )
                             },
+
                             colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor =
-                                        MaterialTheme.colorScheme.primary,
-                                    contentColor =
-                                        MaterialTheme.colorScheme.onPrimary
-                                ),
+                                ButtonDefaults
+                                    .buttonColors(
+                                        containerColor =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .primary,
+
+                                        contentColor =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onPrimary
+                                    ),
+
                             shape =
-                                RoundedCornerShape(24.dp),
-                            modifier = Modifier
-                                .fillMaxWidth(0.8f)
-                                .height(48.dp)
+                                RoundedCornerShape(
+                                    24.dp
+                                ),
+
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth(0.8f)
+                                    .height(48.dp)
                         ) {
 
                             Text(
                                 text = "Start",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
+
+                                fontSize =
+                                    18.sp,
+
+                                fontWeight =
+                                    FontWeight.Bold
                             )
                         }
                     }
@@ -454,26 +691,44 @@ fun FocusSessionScreen(
 
                         Button(
                             onClick = {
-                                viewModel.pauseFocusSession()
+
+                                viewModel
+                                    .pauseFocusSession()
                             },
+
                             colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor =
-                                        MaterialTheme.colorScheme.error,
-                                    contentColor =
-                                        MaterialTheme.colorScheme.onError
-                                ),
+                                ButtonDefaults
+                                    .buttonColors(
+                                        containerColor =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .error,
+
+                                        contentColor =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onError
+                                    ),
+
                             shape =
-                                RoundedCornerShape(24.dp),
-                            modifier = Modifier
-                                .fillMaxWidth(0.8f)
-                                .height(48.dp)
+                                RoundedCornerShape(
+                                    24.dp
+                                ),
+
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth(0.8f)
+                                    .height(48.dp)
                         ) {
 
                             Text(
                                 text = "Stop",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
+
+                                fontSize =
+                                    18.sp,
+
+                                fontWeight =
+                                    FontWeight.Bold
                             )
                         }
                     }
@@ -482,60 +737,97 @@ fun FocusSessionScreen(
 
                         Row(
                             horizontalArrangement =
-                                Arrangement.spacedBy(16.dp),
+                                Arrangement.spacedBy(
+                                    16.dp
+                                ),
+
                             modifier =
-                                Modifier.fillMaxWidth(0.85f)
+                                Modifier
+                                    .fillMaxWidth(
+                                        0.85f
+                                    )
                         ) {
 
                             Button(
                                 onClick = {
-                                    viewModel.resumeFocusSession()
+
+                                    viewModel
+                                        .resumeFocusSession()
                                 },
+
                                 colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor =
-                                            MaterialTheme.colorScheme
-                                                .primary,
-                                        contentColor =
-                                            MaterialTheme.colorScheme
-                                                .onPrimary
-                                    ),
+                                    ButtonDefaults
+                                        .buttonColors(
+                                            containerColor =
+                                                MaterialTheme
+                                                    .colorScheme
+                                                    .primary,
+
+                                            contentColor =
+                                                MaterialTheme
+                                                    .colorScheme
+                                                    .onPrimary
+                                        ),
+
                                 shape =
-                                    RoundedCornerShape(24.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
+                                    RoundedCornerShape(
+                                        24.dp
+                                    ),
+
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
                             ) {
 
                                 Text(
-                                    text = "Continue",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
+                                    text =
+                                        "Continue",
+
+                                    fontSize =
+                                        16.sp,
+
+                                    fontWeight =
+                                        FontWeight.Bold
                                 )
                             }
 
                             OutlinedButton(
                                 onClick = {
-                                    viewModel.endAndSaveFocusSession()
+
+                                    viewModel
+                                        .endAndSaveFocusSession()
                                 },
+
                                 shape =
-                                    RoundedCornerShape(24.dp),
+                                    RoundedCornerShape(
+                                        24.dp
+                                    ),
+
                                 colors =
                                     ButtonDefaults
                                         .outlinedButtonColors(
                                             contentColor =
-                                                MaterialTheme.colorScheme
+                                                MaterialTheme
+                                                    .colorScheme
                                                     .error
                                         ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
+
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
                             ) {
 
                                 Text(
-                                    text = "End",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
+                                    text =
+                                        "End",
+
+                                    fontSize =
+                                        16.sp,
+
+                                    fontWeight =
+                                        FontWeight.Bold
                                 )
                             }
                         }
@@ -543,6 +835,73 @@ fun FocusSessionScreen(
                 }
             }
         }
+    }
+
+    if (showExitDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showExitDialog = false
+            },
+
+            shape =
+                RoundedCornerShape(24.dp),
+
+            title = {
+
+                Text(
+                    text =
+                        "Exit Focus Session?",
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            },
+
+            text = {
+
+                Text(
+                    text =
+                        "Your current study session will be discarded and will not be saved."
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+
+                        showExitDialog = false
+
+                        viewModel.exitFocusSession()
+                    }
+                ) {
+
+                    Text(
+                        text = "Exit",
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .error,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick = {
+                        showExitDialog = false
+                    }
+                ) {
+
+                    Text(
+                        text = "Cancel"
+                    )
+                }
+            }
+        )
     }
 }
 
@@ -557,27 +916,39 @@ fun DropdownSelectorRow(
 ) {
 
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier =
+            Modifier.fillMaxWidth()
     ) {
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    onToggle()
-                },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onToggle()
+                    },
+
             verticalAlignment =
                 Alignment.CenterVertically,
+
             horizontalArrangement =
                 Arrangement.SpaceBetween
         ) {
 
             Text(
-                text = label,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
+                text =
+                    label,
+
+                fontSize =
+                    14.sp,
+
+                fontWeight =
+                    FontWeight.Medium,
+
                 color =
-                    MaterialTheme.colorScheme.onSurface
+                    MaterialTheme
+                        .colorScheme
+                        .onSurface
             )
 
             Row(
@@ -587,81 +958,137 @@ fun DropdownSelectorRow(
 
                 Surface(
                     color =
-                        MaterialTheme.colorScheme.primary
-                            .copy(alpha = 0.12f),
+                        MaterialTheme
+                            .colorScheme
+                            .primary
+                            .copy(
+                                alpha = 0.12f
+                            ),
+
                     shape =
-                        RoundedCornerShape(8.dp)
+                        RoundedCornerShape(
+                            8.dp
+                        )
                 ) {
 
                     Text(
-                        text = selectedValueText,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
+                        text =
+                            selectedValueText,
+
+                        fontSize =
+                            13.sp,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
                         color =
-                            MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(
-                            horizontal = 10.dp,
-                            vertical = 4.dp
-                        )
+                            MaterialTheme
+                                .colorScheme
+                                .primary,
+
+                        modifier =
+                            Modifier.padding(
+                                horizontal = 10.dp,
+                                vertical = 4.dp
+                            )
                     )
                 }
 
                 Spacer(
-                    modifier = Modifier.width(4.dp)
+                    modifier =
+                        Modifier.width(4.dp)
                 )
 
                 Icon(
                     imageVector =
-                        Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
+                        Icons.Default
+                            .KeyboardArrowDown,
+
+                    contentDescription =
+                        null,
+
                     tint =
-                        MaterialTheme.colorScheme.onSurface
-                            .copy(alpha = 0.6f)
+                        MaterialTheme
+                            .colorScheme
+                            .onSurface
+                            .copy(
+                                alpha = 0.6f
+                            )
                 )
             }
         }
 
         AnimatedVisibility(
-            visible = isExpanded,
+            visible =
+                isExpanded,
+
             enter =
-                fadeIn() + expandVertically(),
+                fadeIn() +
+                        expandVertically(),
+
             exit =
-                fadeOut() + shrinkVertically()
+                fadeOut() +
+                        shrinkVertically()
         ) {
 
             FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = 10.dp
+                        ),
+
                 horizontalArrangement =
                     Arrangement.spacedBy(8.dp),
+
                 verticalArrangement =
                     Arrangement.spacedBy(8.dp)
             ) {
 
-                options.forEach { (minutes, text) ->
+                options.forEach {
+                        (minutes, text) ->
 
                     Surface(
-                        modifier = Modifier.clickable {
-                            onOptionSelected(minutes)
-                        },
+                        modifier =
+                            Modifier.clickable {
+
+                                onOptionSelected(
+                                    minutes
+                                )
+                            },
+
                         color =
-                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme
+                                .colorScheme
+                                .surfaceVariant,
+
                         shape =
-                            RoundedCornerShape(8.dp)
+                            RoundedCornerShape(
+                                8.dp
+                            )
                     ) {
 
                         Text(
-                            text = text,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
+                            text =
+                                text,
+
+                            fontSize =
+                                12.sp,
+
+                            fontWeight =
+                                FontWeight.Medium,
+
                             color =
-                                MaterialTheme.colorScheme
+                                MaterialTheme
+                                    .colorScheme
                                     .onSurfaceVariant,
-                            modifier = Modifier.padding(
-                                horizontal = 10.dp,
-                                vertical = 6.dp
-                            )
+
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = 10.dp,
+                                    vertical = 6.dp
+                                )
                         )
                     }
                 }
@@ -680,7 +1107,9 @@ fun WheelPicker(
 ) {
 
     val itemHeightPx =
-        with(LocalDensity.current) {
+        with(
+            LocalDensity.current
+        ) {
             50.dp.toPx()
         }
 
@@ -692,39 +1121,57 @@ fun WheelPicker(
 
     val snapFlingBehavior =
         rememberSnapFlingBehavior(
-            lazyListState = listState
+            lazyListState =
+                listState
         )
 
-    val currentFocusedIndex by remember {
+    val currentFocusedIndex by
+    remember {
+
         derivedStateOf {
 
             val layoutInfo =
                 listState.layoutInfo
 
             val visibleItems =
-                layoutInfo.visibleItemsInfo
+                layoutInfo
+                    .visibleItemsInfo
 
-            if (visibleItems.isEmpty()) {
+            if (
+                visibleItems.isEmpty()
+            ) {
+
                 0
+
             } else {
 
                 val viewportCenter =
                     (
-                            layoutInfo.viewportStartOffset +
-                                    layoutInfo.viewportEndOffset
+                            layoutInfo
+                                .viewportStartOffset +
+                                    layoutInfo
+                                        .viewportEndOffset
                             ) / 2f
 
                 visibleItems.minByOrNull {
+
                     abs(
-                        (it.offset + it.size / 2f) -
+                        (
+                                it.offset +
+                                        it.size / 2f
+                                ) -
                                 viewportCenter
                     )
+
                 }?.index ?: 0
             }
         }
     }
 
-    LaunchedEffect(currentFocusedIndex) {
+    LaunchedEffect(
+        currentFocusedIndex
+    ) {
+
         onValueChange(
             currentFocusedIndex % count
         )
@@ -733,25 +1180,36 @@ fun WheelPicker(
     Row(
         verticalAlignment =
             Alignment.CenterVertically,
+
         horizontalArrangement =
             Arrangement.Center
     ) {
 
         Box(
-            modifier = Modifier
-                .width(65.dp)
-                .height(150.dp),
+            modifier =
+                Modifier
+                    .width(65.dp)
+                    .height(150.dp),
+
             contentAlignment =
                 Alignment.Center
         ) {
 
             LazyColumn(
-                state = listState,
-                flingBehavior = snapFlingBehavior,
+                state =
+                    listState,
+
+                flingBehavior =
+                    snapFlingBehavior,
+
                 contentPadding =
-                    PaddingValues(vertical = 50.dp),
+                    PaddingValues(
+                        vertical = 50.dp
+                    ),
+
                 horizontalAlignment =
                     Alignment.CenterHorizontally,
+
                 modifier =
                     Modifier.fillMaxSize()
             ) {
@@ -759,7 +1217,8 @@ fun WheelPicker(
                 items(count) { index ->
 
                     val isSelected =
-                        index == currentFocusedIndex
+                        index ==
+                                currentFocusedIndex
 
                     val distanceFromCenter =
                         remember {
@@ -767,32 +1226,42 @@ fun WheelPicker(
                             derivedStateOf {
 
                                 val itemInfo =
-                                    listState.layoutInfo
+                                    listState
+                                        .layoutInfo
                                         .visibleItemsInfo
                                         .firstOrNull {
-                                            it.index == index
+
+                                            it.index ==
+                                                    index
                                         }
 
-                                if (itemInfo != null) {
+                                if (
+                                    itemInfo != null
+                                ) {
 
                                     val viewportCenter =
                                         (
-                                                listState.layoutInfo
+                                                listState
+                                                    .layoutInfo
                                                     .viewportStartOffset +
-                                                        listState.layoutInfo
+                                                        listState
+                                                            .layoutInfo
                                                             .viewportEndOffset
                                                 ) / 2f
 
                                     val itemCenter =
                                         itemInfo.offset +
-                                                itemInfo.size / 2f
+                                                itemInfo.size /
+                                                2f
 
                                     abs(
                                         itemCenter -
                                                 viewportCenter
-                                    ) / itemHeightPx
+                                    ) /
+                                            itemHeightPx
 
                                 } else {
+
                                     1f
                                 }
                             }
@@ -804,40 +1273,59 @@ fun WheelPicker(
                                         (34 - 22) *
                                         (
                                                 1f -
-                                                        distanceFromCenter.value
-                                                            .coerceIn(0f, 1f)
+                                                        distanceFromCenter
+                                                            .value
+                                                            .coerceIn(
+                                                                0f,
+                                                                1f
+                                                            )
                                                 )
                                 ).sp
 
                     Box(
-                        modifier = Modifier
-                            .height(50.dp)
-                            .fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .height(50.dp)
+                                .fillMaxWidth(),
+
                         contentAlignment =
                             Alignment.Center
                     ) {
 
                         Text(
-                            text = String.format(
-                                Locale.getDefault(),
-                                "%02d",
-                                index
-                            ),
-                            fontSize = fontSize,
+                            text =
+                                String.format(
+                                    Locale.getDefault(),
+                                    "%02d",
+                                    index
+                                ),
+
+                            fontSize =
+                                fontSize,
+
                             fontWeight =
-                                if (isSelected) {
+                                if (
+                                    isSelected
+                                ) {
                                     FontWeight.Bold
                                 } else {
                                     FontWeight.Normal
                                 },
+
                             color =
-                                if (isSelected) {
-                                    MaterialTheme.colorScheme
+                                if (
+                                    isSelected
+                                ) {
+                                    MaterialTheme
+                                        .colorScheme
                                         .onBackground
                                 } else {
-                                    MaterialTheme.colorScheme
+                                    MaterialTheme
+                                        .colorScheme
                                         .onBackground
-                                        .copy(alpha = 0.3f)
+                                        .copy(
+                                            alpha = 0.3f
+                                        )
                                 }
                         )
                     }
@@ -846,14 +1334,24 @@ fun WheelPicker(
         }
 
         Text(
-            text = unitText,
-            fontSize = 13.sp,
+            text =
+                unitText,
+
+            fontSize =
+                13.sp,
+
             color =
-                MaterialTheme.colorScheme
+                MaterialTheme
+                    .colorScheme
                     .onBackground
-                    .copy(alpha = 0.6f),
+                    .copy(
+                        alpha = 0.6f
+                    ),
+
             modifier =
-                Modifier.padding(start = 2.dp)
+                Modifier.padding(
+                    start = 2.dp
+                )
         )
     }
 }

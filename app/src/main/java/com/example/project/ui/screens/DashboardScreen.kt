@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
@@ -34,8 +34,9 @@ import com.example.project.viewmodel.DashboardViewModel
 import com.example.project.viewmodel.PlannerViewModel
 import com.example.project.viewmodel.ProfileViewModel
 import io.github.jan.supabase.auth.auth
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private enum class TaskListType(
@@ -58,33 +59,43 @@ fun DashboardScreen(
     plannerViewModel: PlannerViewModel,
     profileViewModel: ProfileViewModel
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val currentTimeText by viewModel.currentTimeText.collectAsState()
-    val plannerItems by plannerViewModel.items.collectAsState()
-    val profile by profileViewModel.profile.collectAsState()
+    val uiState by
+    viewModel.uiState.collectAsState()
 
-    var selectedList by remember {
+    val currentTimeText by
+    viewModel.currentTimeText.collectAsState()
+
+    val plannerItems by
+    plannerViewModel.items.collectAsState()
+
+    val profile by
+    profileViewModel.profile.collectAsState()
+
+    var selectedList by
+    remember {
         mutableStateOf<TaskListType?>(null)
     }
 
-    var selectedDetail by remember {
+    var selectedDetail by
+    remember {
         mutableStateOf<PlannerItem?>(null)
     }
 
-    var showReminders by remember {
+    var showReminders by
+    remember {
         mutableStateOf(false)
     }
 
-    var notificationsRead by rememberSaveable {
+    var notificationsRead by
+    rememberSaveable {
         mutableStateOf(false)
-    }
-
-    var firstResume by remember {
-        mutableStateOf(true)
     }
 
     val currentUserId =
-        supabase.auth.currentUserOrNull()?.id
+        supabase
+            .auth
+            .currentUserOrNull()
+            ?.id
 
     val lifecycleOwner =
         LocalLifecycleOwner.current
@@ -93,47 +104,45 @@ fun DashboardScreen(
         lifecycleOwner,
         currentUserId
     ) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (
-                    event == Lifecycle.Event.ON_RESUME
-                ) {
-                    if (firstResume) {
-                        firstResume = false
-                    } else {
-                        plannerViewModel
-                            .refreshItemsInBackground()
 
-                        profileViewModel
-                            .refreshProfileInBackground()
-                    }
+        val observer =
+            LifecycleEventObserver {
+                    _, event ->
+
+                if (
+                    event ==
+                    Lifecycle.Event.ON_RESUME
+                ) {
+
+                    plannerViewModel
+                        .refreshItemsInBackground()
+
+                    profileViewModel
+                        .refreshProfileInBackground()
                 }
             }
 
-        lifecycleOwner.lifecycle.addObserver(
-            observer
-        )
-
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(
+        lifecycleOwner
+            .lifecycle
+            .addObserver(
                 observer
             )
+
+        onDispose {
+
+            lifecycleOwner
+                .lifecycle
+                .removeObserver(
+                    observer
+                )
         }
     }
 
     val completedItems =
         remember(plannerItems) {
-            plannerItems.filter {
-                it.status.equals(
-                    "Completed",
-                    ignoreCase = true
-                )
-            }
-        }
 
-    val remainingItems =
-        remember(plannerItems) {
-            plannerItems.filterNot {
+            plannerItems.filter {
+
                 it.status.equals(
                     "Completed",
                     ignoreCase = true
@@ -142,31 +151,50 @@ fun DashboardScreen(
         }
 
     val missedItems =
-        remember(remainingItems) {
-            remainingItems
+        remember(plannerItems) {
+
+            plannerItems
                 .filter {
-                    dueDateMillis(it.dueAt) <=
-                            Date().time
+
+                    it.status.equals(
+                        "Missed",
+                        ignoreCase = true
+                    )
                 }
                 .sortedBy {
-                    dueDateMillis(it.dueAt)
+
+                    dueDateMillis(
+                        it.dueAt
+                    )
                 }
         }
 
-    val upcomingItems =
-        remember(remainingItems) {
-            remainingItems
+    val remainingItems =
+        remember(plannerItems) {
+
+            plannerItems
                 .filter {
-                    dueDateMillis(it.dueAt) >
-                            Date().time
+
+                    !it.status.equals(
+                        "Completed",
+                        ignoreCase = true
+                    ) &&
+                            !it.status.equals(
+                                "Missed",
+                                ignoreCase = true
+                            )
                 }
                 .sortedBy {
-                    dueDateMillis(it.dueAt)
+
+                    dueDateMillis(
+                        it.dueAt
+                    )
                 }
         }
 
     val selectedItems =
         when (selectedList) {
+
             TaskListType.REMAINING ->
                 remainingItems
 
@@ -181,63 +209,83 @@ fun DashboardScreen(
         }
 
     val nextItem =
-        upcomingItems.firstOrNull()
+        remainingItems.firstOrNull()
 
     val reminders =
-        remember(remainingItems) {
+        remember(plannerItems) {
+
             plannerReminders(
-                remainingItems
+                plannerItems
             )
         }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(
-                horizontal = 16.dp
-            ),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = 16.dp
+                ),
+
         verticalArrangement =
-            Arrangement.spacedBy(20.dp),
+            Arrangement.spacedBy(
+                20.dp
+            ),
+
         contentPadding =
             PaddingValues(
                 top = 16.dp,
                 bottom = 24.dp
             )
     ) {
+
         item {
+
             Box(
                 modifier =
                     Modifier.fillMaxWidth()
             ) {
+
                 HeaderCard(
                     userName =
                         profile?.username
                             ?: uiState.userName,
+
                     profilePicture =
                         profile?.profile_picture
                 )
 
                 Box(
-                    modifier = Modifier
-                        .align(
-                            Alignment.TopEnd
-                        )
-                        .padding(
-                            top = 8.dp,
-                            end = 8.dp
-                        )
+                    modifier =
+                        Modifier
+                            .align(
+                                Alignment.TopEnd
+                            )
+                            .padding(
+                                top = 8.dp,
+                                end = 8.dp
+                            )
                 ) {
+
                     IconButton(
                         onClick = {
-                            showReminders = true
-                            notificationsRead = true
+
+                            showReminders =
+                                true
+
+                            notificationsRead =
+                                true
                         }
                     ) {
+
                         Icon(
                             imageVector =
-                                Icons.Default.Notifications,
+                                Icons.Default
+                                    .Notifications,
+
                             contentDescription =
                                 "Notifications",
+
                             tint =
                                 MaterialTheme
                                     .colorScheme
@@ -249,6 +297,7 @@ fun DashboardScreen(
                         reminders.isNotEmpty() &&
                         !notificationsRead
                     ) {
+
                         Badge(
                             modifier =
                                 Modifier
@@ -266,16 +315,21 @@ fun DashboardScreen(
         }
 
         item {
+
             ProgressSummaryCard(
                 completedTasks =
                     completedItems.size,
+
                 totalTasks =
                     plannerItems.size,
+
                 nextTaskName =
                     nextItem?.title
                         ?: "No tasks left",
+
                 nextTaskTime =
-                    nextItem?.dueAt
+                    nextItem
+                        ?.dueAt
                         ?.substringAfterLast(
                             ", "
                         )
@@ -284,21 +338,27 @@ fun DashboardScreen(
         }
 
         item {
+
             DailyMetrics(
                 remainingCount =
                     remainingItems.size,
+
                 missedCount =
                     missedItems.size,
+
                 completedCount =
                     completedItems.size,
+
                 onRemainingClick = {
                     selectedList =
                         TaskListType.REMAINING
                 },
+
                 onMissedClick = {
                     selectedList =
                         TaskListType.MISSED
                 },
+
                 onCompletedClick = {
                     selectedList =
                         TaskListType.COMPLETED
@@ -307,10 +367,13 @@ fun DashboardScreen(
         }
 
         item {
+
             FocusSessionCard(
                 currentTimeText =
                     currentTimeText,
+
                 onStartClick = {
+
                     navController.navigate(
                         Screen.FocusSession.route
                     )
@@ -320,12 +383,18 @@ fun DashboardScreen(
     }
 
     selectedList?.let { type ->
+
         PlannerTitleDialog(
-            title = type.title,
-            items = selectedItems,
+            title =
+                type.title,
+
+            items =
+                selectedItems,
+
             onDismiss = {
                 selectedList = null
             },
+
             onItemClick = {
                 selectedDetail = it
             }
@@ -333,8 +402,11 @@ fun DashboardScreen(
     }
 
     selectedDetail?.let { item ->
+
         PlannerDetailDialog(
-            item = item,
+            item =
+                item,
+
             onDismiss = {
                 selectedDetail = null
             }
@@ -342,8 +414,11 @@ fun DashboardScreen(
     }
 
     if (showReminders) {
+
         ReminderDialog(
-            reminders = reminders,
+            reminders =
+                reminders,
+
             onDismiss = {
                 showReminders = false
             }
@@ -360,23 +435,26 @@ private fun DailyMetrics(
     onMissedClick: () -> Unit,
     onCompletedClick: () -> Unit
 ) {
-    val textColor = Color.Black
-    val remainingColor =
-        Color(0xFFA7DFFA)
-    val deadlineColor =
-        Color(0xFFFFA8AC)
-    val completedColor =
-        Color(0xFFA6F7A1)
-
     Column {
+
         Text(
-            text = "Task Overview",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+            text =
+                "Task Overview",
+
+            fontSize =
+                14.sp,
+
+            fontWeight =
+                FontWeight.Bold,
+
             color =
-                MaterialTheme.colorScheme
+                MaterialTheme
+                    .colorScheme
                     .onBackground
-                    .copy(alpha = 0.7f),
+                    .copy(
+                        alpha = 0.7f
+                    ),
+
             modifier =
                 Modifier.padding(
                     bottom = 8.dp
@@ -386,37 +464,68 @@ private fun DailyMetrics(
         Row(
             modifier =
                 Modifier.fillMaxWidth(),
+
             horizontalArrangement =
-                Arrangement.spacedBy(12.dp)
+                Arrangement.spacedBy(
+                    12.dp
+                )
         ) {
+
             MetricCard(
-                label = "Remaining",
-                count = remainingCount,
-                color = remainingColor,
-                contentColor = textColor,
-                onClick = onRemainingClick,
+                label =
+                    "Remaining",
+
+                count =
+                    remainingCount,
+
+                color =
+                    Color(0xFFA7DFFA),
+
+                onClick =
+                    onRemainingClick,
+
                 modifier =
-                    Modifier.weight(1f)
+                    Modifier.weight(
+                        1f
+                    )
             )
 
             MetricCard(
-                label = "Missed",
-                count = missedCount,
-                color = deadlineColor,
-                contentColor = textColor,
-                onClick = onMissedClick,
+                label =
+                    "Missed",
+
+                count =
+                    missedCount,
+
+                color =
+                    Color(0xFFFFA8AC),
+
+                onClick =
+                    onMissedClick,
+
                 modifier =
-                    Modifier.weight(1f)
+                    Modifier.weight(
+                        1f
+                    )
             )
 
             MetricCard(
-                label = "Completed",
-                count = completedCount,
-                color = completedColor,
-                contentColor = textColor,
-                onClick = onCompletedClick,
+                label =
+                    "Completed",
+
+                count =
+                    completedCount,
+
+                color =
+                    Color(0xFFA6F7A1),
+
+                onClick =
+                    onCompletedClick,
+
                 modifier =
-                    Modifier.weight(1f)
+                    Modifier.weight(
+                        1f
+                    )
             )
         }
     }
@@ -427,7 +536,6 @@ private fun MetricCard(
     label: String,
     count: Int,
     color: Color,
-    contentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier
 ) {
@@ -435,16 +543,22 @@ private fun MetricCard(
         modifier =
             modifier
                 .height(150.dp)
-                .clickable(
-                    onClick = onClick
-                ),
+                .clickable {
+                    onClick()
+                },
+
         shape =
-            RoundedCornerShape(20.dp),
+            RoundedCornerShape(
+                20.dp
+            ),
+
         colors =
             CardDefaults.cardColors(
-                containerColor = color
+                containerColor =
+                    color
             )
     ) {
+
         Column(
             modifier =
                 Modifier
@@ -452,22 +566,37 @@ private fun MetricCard(
                     .padding(
                         vertical = 16.dp
                     ),
+
             horizontalAlignment =
                 Alignment.CenterHorizontally,
+
             verticalArrangement =
                 Arrangement.SpaceBetween
         ) {
+
             Text(
-                text = count.toString(),
-                fontSize = 52.sp,
-                fontWeight = FontWeight.Bold,
-                color = contentColor
+                text =
+                    count.toString(),
+
+                fontSize =
+                    52.sp,
+
+                fontWeight =
+                    FontWeight.Bold,
+
+                color =
+                    Color.Black
             )
 
             Text(
-                text = label,
-                fontSize = 13.sp,
-                color = contentColor
+                text =
+                    label,
+
+                fontSize =
+                    13.sp,
+
+                color =
+                    Color.Black
             )
         }
     }
@@ -480,37 +609,40 @@ private fun PlannerTitleDialog(
     onDismiss: () -> Unit,
     onItemClick: (PlannerItem) -> Unit
 ) {
-    val isDarkMode =
+    val isDark =
         MaterialTheme
             .colorScheme
             .background
             .luminance() < 0.5f
 
     val dialogColor =
-        if (isDarkMode) {
+        if (isDark) {
             Color(0xFF1E1E1E)
         } else {
             Color.White
         }
 
-    val rowColor =
-        Color(0xFFA7DFFA)
-
-    val dialogTextColor =
-        if (isDarkMode) {
+    val textColor =
+        if (isDark) {
             Color(0xFFE0E0E0)
         } else {
             Color.Black
         }
 
     Dialog(
-        onDismissRequest = onDismiss
+        onDismissRequest =
+            onDismiss
     ) {
+
         Surface(
             shape =
-                RoundedCornerShape(24.dp),
-            color = dialogColor,
-            tonalElevation = 8.dp,
+                RoundedCornerShape(
+                    24.dp
+                ),
+
+            color =
+                dialogColor,
+
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -519,19 +651,32 @@ private fun PlannerTitleDialog(
                         max = 540.dp
                     )
         ) {
+
             Column(
                 modifier =
-                    Modifier.padding(18.dp)
+                    Modifier.padding(
+                        18.dp
+                    )
             ) {
+
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
                 ) {
+
                     Text(
-                        text = title,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = dialogTextColor,
+                        text =
+                            title,
+
+                        fontSize =
+                            28.sp,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        color =
+                            textColor,
+
                         modifier =
                             Modifier.align(
                                 Alignment.Center
@@ -539,114 +684,135 @@ private fun PlannerTitleDialog(
                     )
 
                     IconButton(
-                        onClick = onDismiss,
+                        onClick =
+                            onDismiss,
+
                         modifier =
                             Modifier.align(
                                 Alignment.CenterEnd
                             )
                     ) {
+
                         Icon(
-                            imageVector =
-                                Icons.Default.Close,
+                            Icons.Default.Close,
                             contentDescription =
                                 "Close",
-                            tint = dialogTextColor
+
+                            tint =
+                                textColor
                         )
                     }
                 }
 
-                HorizontalDivider(
-                    color = dialogTextColor
-                )
+                HorizontalDivider()
 
                 Spacer(
                     modifier =
-                        Modifier.height(16.dp)
+                        Modifier.height(
+                            16.dp
+                        )
                 )
 
-                if (items.isEmpty()) {
+                if (
+                    items.isEmpty()
+                ) {
+
                     Box(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
+                                .weight(
+                                    1f
+                                ),
+
                         contentAlignment =
                             Alignment.Center
                     ) {
+
                         Text(
-                            text = "No items",
+                            "No items",
                             color =
-                                dialogTextColor
-                                    .copy(alpha = 0.65f)
+                                textColor.copy(
+                                    alpha =
+                                        0.65f
+                                )
                         )
                     }
+
                 } else {
+
                     LazyColumn(
                         verticalArrangement =
                             Arrangement.spacedBy(
                                 14.dp
                             ),
+
                         modifier =
                             Modifier.weight(
                                 1f,
                                 fill = false
                             )
                     ) {
+
                         items(
                             items,
-                            key = { it.id }
+                            key = {
+                                it.id
+                            }
                         ) { item ->
+
                             Surface(
-                                color = rowColor,
+                                color =
+                                    Color(0xFFA7DFFA),
+
                                 shape =
                                     RoundedCornerShape(
                                         14.dp
                                     ),
+
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .clickable {
+
                                             onItemClick(
                                                 item
                                             )
                                         }
                             ) {
+
                                 Row(
                                     modifier =
                                         Modifier.padding(
-                                            horizontal =
-                                                16.dp,
-                                            vertical =
-                                                17.dp
+                                            horizontal = 16.dp,
+                                            vertical = 17.dp
                                         ),
+
                                     verticalAlignment =
                                         Alignment.CenterVertically
                                 ) {
+
                                     Text(
                                         text =
                                             item.title,
-                                        color =
-                                            Color.Black,
-                                        fontSize =
-                                            16.sp,
+
                                         modifier =
                                             Modifier.weight(
                                                 1f
-                                            )
+                                            ),
+
+                                        color =
+                                            Color.Black
                                     )
 
                                     Icon(
-                                        imageVector =
-                                            Icons.Default
-                                                .ArrowForwardIos,
+                                        Icons.AutoMirrored.Filled.ArrowForwardIos,
+
                                         contentDescription =
                                             null,
+
                                         tint =
-                                            Color.Black,
-                                        modifier =
-                                            Modifier.size(
-                                                18.dp
-                                            )
+                                            Color.Black
                                     )
                                 }
                             }
@@ -663,48 +829,62 @@ private fun PlannerDetailDialog(
     item: PlannerItem,
     onDismiss: () -> Unit
 ) {
-    val isDarkMode =
+    val isDark =
         MaterialTheme
             .colorScheme
             .background
             .luminance() < 0.5f
 
     val dialogColor =
-        if (isDarkMode) {
+        if (isDark) {
             Color(0xFF1E1E1E)
         } else {
             Color.White
         }
 
-    val detailColor =
-        Color(0xFFA7DFFA)
-
     val textColor =
-        if (isDarkMode) {
+        if (isDark) {
             Color(0xFFE0E0E0)
         } else {
             Color.Black
         }
 
     Dialog(
-        onDismissRequest = onDismiss
+        onDismissRequest =
+            onDismiss
     ) {
+
         Surface(
             shape =
-                RoundedCornerShape(24.dp),
-            color = dialogColor,
-            tonalElevation = 8.dp,
+                RoundedCornerShape(
+                    24.dp
+                ),
+
+            color =
+                dialogColor,
+
             modifier =
                 Modifier.fillMaxWidth()
         ) {
+
             Column(
                 modifier =
-                    Modifier.padding(20.dp)
+                    Modifier.padding(
+                        20.dp
+                    )
             ) {
-                Box(
+
+                Row(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier.fillMaxWidth(),
+
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween,
+
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
+
                     Text(
                         text =
                             if (
@@ -715,77 +895,85 @@ private fun PlannerDetailDialog(
                             } else {
                                 "Task details"
                             },
-                        fontSize = 24.sp,
+
+                        fontSize =
+                            24.sp,
+
                         fontWeight =
                             FontWeight.Bold,
-                        color = textColor,
-                        modifier =
-                            Modifier.align(
-                                Alignment.CenterStart
-                            )
+
+                        color =
+                            textColor
                     )
 
                     IconButton(
-                        onClick = onDismiss,
-                        modifier =
-                            Modifier.align(
-                                Alignment.CenterEnd
-                            )
+                        onClick =
+                            onDismiss
                     ) {
+
                         Icon(
-                            imageVector =
-                                Icons.Default.Close,
+                            Icons.Default.Close,
                             contentDescription =
                                 "Close",
-                            tint = textColor
+
+                            tint =
+                                textColor
                         )
                     }
                 }
 
                 Spacer(
                     modifier =
-                        Modifier.height(12.dp)
+                        Modifier.height(
+                            12.dp
+                        )
                 )
 
                 Surface(
-                    color = detailColor,
+                    color =
+                        Color(0xFFA7DFFA),
+
                     shape =
-                        RoundedCornerShape(18.dp),
+                        RoundedCornerShape(
+                            18.dp
+                        ),
+
                     modifier =
                         Modifier.fillMaxWidth()
                 ) {
+
                     Column(
                         modifier =
-                            Modifier.padding(18.dp),
+                            Modifier.padding(
+                                18.dp
+                            ),
+
                         verticalArrangement =
-                            Arrangement.spacedBy(8.dp)
+                            Arrangement.spacedBy(
+                                8.dp
+                            )
                     ) {
+
                         DetailLine(
-                            label = "Title",
-                            value = item.title,
-                            textColor = Color.Black
+                            "Title",
+                            item.title
                         )
 
                         DetailLine(
-                            label = "Description",
-                            value =
-                                item.description
-                                    .ifBlank {
-                                        "—"
-                                    },
-                            textColor = Color.Black
+                            "Description",
+                            item.description.ifBlank {
+                                "—"
+                            }
                         )
 
                         DetailLine(
-                            label = "Due date",
-                            value = item.dueAt,
-                            textColor = Color.Black
+                            "Due date",
+                            item.dueAt
                         )
 
                         DetailLine(
-                            label = "Status",
-                            value = item.status,
-                            textColor = Color.Black
+                            "Status",
+                            item.status
                         )
                     }
                 }
@@ -797,23 +985,27 @@ private fun PlannerDetailDialog(
 @Composable
 private fun DetailLine(
     label: String,
-    value: String,
-    textColor: Color
+    value: String
 ) {
-    Column(
-        verticalArrangement =
-            Arrangement.spacedBy(2.dp)
-    ) {
+    Column {
+
         Text(
-            text = "$label:",
+            text =
+                "$label:",
+
             fontWeight =
                 FontWeight.Bold,
-            color = textColor
+
+            color =
+                Color.Black
         )
 
         Text(
-            text = value,
-            color = textColor
+            text =
+                value,
+
+            color =
+                Color.Black
         )
     }
 }
@@ -823,34 +1015,40 @@ private fun ReminderDialog(
     reminders: List<PlannerReminder>,
     onDismiss: () -> Unit
 ) {
-    val isDarkMode =
+    val isDark =
         MaterialTheme
             .colorScheme
             .background
             .luminance() < 0.5f
 
     val dialogColor =
-        if (isDarkMode) {
+        if (isDark) {
             Color(0xFF1E1E1E)
         } else {
             Color.White
         }
 
-    val dialogTextColor =
-        if (isDarkMode) {
+    val textColor =
+        if (isDark) {
             Color(0xFFE0E0E0)
         } else {
             Color.Black
         }
 
     Dialog(
-        onDismissRequest = onDismiss
+        onDismissRequest =
+            onDismiss
     ) {
+
         Surface(
             shape =
-                RoundedCornerShape(24.dp),
-            color = dialogColor,
-            tonalElevation = 8.dp,
+                RoundedCornerShape(
+                    24.dp
+                ),
+
+            color =
+                dialogColor,
+
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -859,118 +1057,139 @@ private fun ReminderDialog(
                         max = 540.dp
                     )
         ) {
+
             Column(
                 modifier =
-                    Modifier.padding(18.dp)
+                    Modifier.padding(
+                        18.dp
+                    )
             ) {
-                Box(
+
+                Row(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier.fillMaxWidth(),
+
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween,
+
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
+
                     Text(
                         text =
                             "Deadline reminders",
-                        fontSize = 24.sp,
+
+                        fontSize =
+                            24.sp,
+
                         fontWeight =
                             FontWeight.Bold,
+
                         color =
-                            dialogTextColor,
-                        modifier =
-                            Modifier.align(
-                                Alignment.CenterStart
-                            )
+                            textColor
                     )
 
                     IconButton(
-                        onClick = onDismiss,
-                        modifier =
-                            Modifier.align(
-                                Alignment.CenterEnd
-                            )
+                        onClick =
+                            onDismiss
                     ) {
+
                         Icon(
-                            imageVector =
-                                Icons.Default.Close,
+                            Icons.Default.Close,
                             contentDescription =
                                 "Close",
+
                             tint =
-                                dialogTextColor
+                                textColor
                         )
                     }
                 }
 
-                HorizontalDivider(
-                    color =
-                        dialogTextColor
-                )
+                HorizontalDivider()
 
                 Spacer(
                     modifier =
-                        Modifier.height(14.dp)
+                        Modifier.height(
+                            14.dp
+                        )
                 )
 
-                if (reminders.isEmpty()) {
+                if (
+                    reminders.isEmpty()
+                ) {
+
                     Box(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
+                                .weight(
+                                    1f
+                                ),
+
                         contentAlignment =
                             Alignment.Center
                     ) {
+
                         Text(
                             text =
                                 "No upcoming reminders",
+
                             color =
-                                dialogTextColor
-                                    .copy(
-                                        alpha = 0.65f
-                                    )
+                                textColor.copy(
+                                    alpha =
+                                        0.65f
+                                )
                         )
                     }
+
                 } else {
+
                     LazyColumn(
                         verticalArrangement =
                             Arrangement.spacedBy(
                                 10.dp
                             )
                     ) {
+
                         items(
-                            reminders
+                            reminders,
+                            key = {
+                                it.item.id
+                            }
                         ) { reminder ->
+
                             Card(
+                                modifier =
+                                    Modifier.fillMaxWidth(),
+
                                 shape =
                                     RoundedCornerShape(
                                         12.dp
-                                    ),
-                                colors =
-                                    CardDefaults
-                                        .cardColors(
-                                            containerColor =
-                                                MaterialTheme
-                                                    .colorScheme
-                                                    .surfaceVariant
-                                        ),
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                    )
                             ) {
+
                                 Column(
                                     modifier =
                                         Modifier.padding(
                                             12.dp
                                         )
                                 ) {
+
                                     Text(
                                         text =
                                             reminder
                                                 .item
                                                 .title,
+
                                         fontWeight =
                                             FontWeight.Bold,
+
                                         fontSize =
                                             15.sp,
+
                                         color =
-                                            dialogTextColor
+                                            textColor
                                     )
 
                                     Spacer(
@@ -983,13 +1202,15 @@ private fun ReminderDialog(
                                     Text(
                                         text =
                                             reminder.message,
+
                                         fontSize =
                                             13.sp,
+
                                         color =
-                                            dialogTextColor
-                                                .copy(
-                                                    alpha = 0.8f
-                                                )
+                                            textColor.copy(
+                                                alpha =
+                                                    0.8f
+                                            )
                                     )
                                 }
                             }
@@ -1001,54 +1222,151 @@ private fun ReminderDialog(
     }
 }
 
-private fun dueDateMillis(
-    dueAt: String
-): Long {
-    return try {
-        val sdf =
-            SimpleDateFormat(
-                "yyyy-MM-dd HH:mm",
-                Locale.getDefault()
-            )
-
-        sdf.parse(dueAt)?.time
-            ?: Long.MAX_VALUE
-
-    } catch (e: Exception) {
-        Long.MAX_VALUE
-    }
-}
-
 private fun plannerReminders(
     items: List<PlannerItem>
 ): List<PlannerReminder> {
+
+    val formatter =
+        DateTimeFormatter.ofPattern(
+            "dd MMMM yyyy, HH:mm",
+            Locale.ENGLISH
+        )
+
     val now =
-        Date().time
+        System.currentTimeMillis()
 
-    return items.mapNotNull { item ->
-        val due =
-            dueDateMillis(item.dueAt)
+    val oneDay =
+        24 * 60 * 60 * 1000L
 
-        val diff =
-            due - now
+    return items
+        .filter { item ->
 
-        if (
-            diff in 0..(24 * 3600 * 1000)
-        ) {
-            val hours =
-                diff / (3600 * 1000)
-
-            PlannerReminder(
-                item,
-                "Due in $hours hour(s)"
-            )
-        } else if (diff < 0) {
-            PlannerReminder(
-                item,
-                "Overdue"
-            )
-        } else {
-            null
+            !item.status.equals(
+                "Completed",
+                ignoreCase = true
+            ) &&
+                    !item.status.equals(
+                        "Missed",
+                        ignoreCase = true
+                    )
         }
+        .mapNotNull { item ->
+
+            try {
+
+                val dueMillis =
+                    LocalDateTime
+                        .parse(
+                            item.dueAt,
+                            formatter
+                        )
+                        .atZone(
+                            ZoneId.systemDefault()
+                        )
+                        .toInstant()
+                        .toEpochMilli()
+
+                val diff =
+                    dueMillis - now
+
+                if (
+                    diff in 1..oneDay
+                ) {
+
+                    val totalMinutes =
+                        (
+                                diff + 59_999L
+                                ) / 60_000L
+
+                    val hours =
+                        totalMinutes / 60
+
+                    val minutes =
+                        totalMinutes % 60
+
+                    val message =
+                        when {
+
+                            hours > 0 ->
+                                "Due in $hours hour(s)"
+
+                            minutes > 0 ->
+                                "Due in $minutes minute(s)"
+
+                            else ->
+                                "Due in less than 1 minute"
+                        }
+
+                    PlannerReminder(
+                        item =
+                            item,
+
+                        message =
+                            message
+                    )
+
+                } else {
+                    null
+                }
+
+            } catch (
+                _: Exception
+            ) {
+
+                null
+            }
+        }
+        .sortedBy { reminder ->
+
+            try {
+
+                LocalDateTime
+                    .parse(
+                        reminder.item.dueAt,
+                        formatter
+                    )
+                    .atZone(
+                        ZoneId.systemDefault()
+                    )
+                    .toInstant()
+                    .toEpochMilli()
+
+            } catch (
+                _: Exception
+            ) {
+
+                Long.MAX_VALUE
+            }
+        }
+}
+
+private fun dueDateMillis(
+    dueAt: String
+): Long {
+
+    return try {
+
+        val formatter =
+            DateTimeFormatter.ofPattern(
+                "dd MMMM yyyy, HH:mm",
+                Locale.ENGLISH
+            )
+
+        LocalDateTime
+            .parse(
+                dueAt,
+                formatter
+            )
+            .atZone(
+                ZoneId.systemDefault()
+            )
+            .toInstant()
+            .toEpochMilli()
+
+    } catch (
+        _: Exception
+    ) {
+
+        Long.MAX_VALUE
     }
 }

@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.project.model.PlannerItem
 import com.example.project.viewmodel.PlannerViewModel
 import java.text.SimpleDateFormat
@@ -41,67 +40,92 @@ import java.util.TimeZone
 fun PlannerScreen(
     viewModel: PlannerViewModel
 ) {
-    val context = LocalContext.current
-    val plannerItems by viewModel.items.collectAsState()
+    val context =
+        LocalContext.current
 
-    var selectedTab by remember {
+    val plannerItems by
+    viewModel.items.collectAsState()
+
+    var selectedTab by
+    remember {
         mutableIntStateOf(0)
     }
 
-    var editingItem by remember {
+    var editingItem by
+    remember {
         mutableStateOf<PlannerItem?>(null)
     }
 
-    var deletingItem by remember {
+    var deletingItem by
+    remember {
         mutableStateOf<PlannerItem?>(null)
     }
 
-    var showEditor by remember {
+    var showEditor by
+    remember {
         mutableStateOf(false)
     }
 
-    var showDatePicker by remember {
+    var showDatePicker by
+    remember {
         mutableStateOf(false)
     }
 
-    var showTimePicker by remember {
+    var showTimePicker by
+    remember {
         mutableStateOf(false)
     }
 
-    var prioritySortingEnabled by remember {
+    var prioritySortingEnabled by
+    remember {
         mutableStateOf(false)
     }
 
-    var title by remember {
+    var title by
+    remember {
         mutableStateOf("")
     }
 
-    var description by remember {
+    var description by
+    remember {
         mutableStateOf("")
     }
 
-    var dueDate by remember {
+    var dueDate by
+    remember {
         mutableStateOf("")
     }
 
-    var dueTime by remember {
+    var dueTime by
+    remember {
         mutableStateOf("23:59")
     }
 
-    var status by remember {
+    var status by
+    remember {
         mutableStateOf("In progress")
     }
 
-    var showStatusMenu by remember {
+    var showStatusMenu by
+    remember {
         mutableStateOf(false)
     }
 
-    fun openEditor(item: PlannerItem?) {
-        if (item != null && isMissed(item)) {
+    fun openEditor(
+        item: PlannerItem?
+    ) {
+        if (
+            item != null &&
+            item.status.equals(
+                "Missed",
+                ignoreCase = true
+            )
+        ) {
             return
         }
 
-        editingItem = item
+        editingItem =
+            item
 
         title =
             item?.title.orEmpty()
@@ -110,12 +134,16 @@ fun PlannerScreen(
             item?.description.orEmpty()
 
         dueDate =
-            item?.dueAt
-                ?.substringBeforeLast(", ")
+            item
+                ?.dueAt
+                ?.substringBeforeLast(
+                    ", "
+                )
                 .orEmpty()
 
         dueTime =
-            item?.dueAt
+            item
+                ?.dueAt
                 ?.substringAfterLast(
                     ", ",
                     "23:59"
@@ -126,12 +154,14 @@ fun PlannerScreen(
             item?.status
                 ?: "In progress"
 
-        showEditor = true
+        showEditor =
+            true
     }
 
     fun savePlannerItem() {
 
         if (title.isBlank()) {
+
             Toast.makeText(
                 context,
                 "Please enter a title",
@@ -142,6 +172,7 @@ fun PlannerScreen(
         }
 
         if (dueDate.isBlank()) {
+
             Toast.makeText(
                 context,
                 "Please select a due date",
@@ -151,7 +182,10 @@ fun PlannerScreen(
             return
         }
 
-        if (!isValidTime(dueTime)) {
+        if (
+            !isValidTime(dueTime)
+        ) {
+
             Toast.makeText(
                 context,
                 "Please enter valid time (HH:mm)",
@@ -171,21 +205,33 @@ fun PlannerScreen(
         viewModel.saveItem(
             PlannerItem(
                 id =
-                    editingItem?.id.orEmpty(),
+                    editingItem
+                        ?.id
+                        .orEmpty(),
+
                 itemType =
                     itemType,
+
                 title =
                     title.trim(),
+
                 description =
                     description.trim(),
+
                 dueAt =
                     "${dueDate.trim()}, ${dueTime.trim()}",
+
                 status =
-                    status
+                    status,
+
+                createdAt =
+                    editingItem
+                        ?.createdAt
             )
         )
 
-        showEditor = false
+        showEditor =
+            false
     }
 
     val type =
@@ -234,7 +280,9 @@ fun PlannerScreen(
                             vertical = 12.dp
                         )
                         .clip(
-                            RoundedCornerShape(50.dp)
+                            RoundedCornerShape(
+                                50.dp
+                            )
                         )
                         .background(
                             MaterialTheme
@@ -244,15 +292,21 @@ fun PlannerScreen(
                         .padding(
                             vertical = 13.dp
                         ),
+
                 contentAlignment =
                     Alignment.Center
             ) {
 
                 Text(
-                    text = "Planner",
-                    fontSize = 24.sp,
+                    text =
+                        "Planner",
+
+                    fontSize =
+                        24.sp,
+
                     fontWeight =
                         FontWeight.Bold,
+
                     color =
                         MaterialTheme
                             .colorScheme
@@ -262,7 +316,9 @@ fun PlannerScreen(
 
             Spacer(
                 modifier =
-                    Modifier.height(14.dp)
+                    Modifier.height(
+                        14.dp
+                    )
             )
 
             Surface(
@@ -272,8 +328,12 @@ fun PlannerScreen(
                         .padding(
                             horizontal = 16.dp
                         ),
+
                 shape =
-                    RoundedCornerShape(18.dp),
+                    RoundedCornerShape(
+                        18.dp
+                    ),
+
                 color =
                     MaterialTheme
                         .colorScheme
@@ -288,22 +348,34 @@ fun PlannerScreen(
                 ) {
 
                     PlannerTab(
-                        text = "Tasks",
+                        text =
+                            "Tasks",
+
                         selected =
                             selectedTab == 0,
+
                         modifier =
-                            Modifier.weight(1f),
+                            Modifier.weight(
+                                1f
+                            ),
+
                         onClick = {
                             selectedTab = 0
                         }
                     )
 
                     PlannerTab(
-                        text = "Projects",
+                        text =
+                            "Projects",
+
                         selected =
                             selectedTab == 1,
+
                         modifier =
-                            Modifier.weight(1f),
+                            Modifier.weight(
+                                1f
+                            ),
+
                         onClick = {
                             selectedTab = 1
                         }
@@ -313,7 +385,9 @@ fun PlannerScreen(
 
             Spacer(
                 modifier =
-                    Modifier.height(14.dp)
+                    Modifier.height(
+                        14.dp
+                    )
             )
 
             Row(
@@ -323,8 +397,10 @@ fun PlannerScreen(
                         .padding(
                             horizontal = 16.dp
                         ),
+
                 horizontalArrangement =
                     Arrangement.SpaceBetween,
+
                 verticalAlignment =
                     Alignment.CenterVertically
             ) {
@@ -338,9 +414,13 @@ fun PlannerScreen(
                             } else {
                                 "Your Projects"
                             },
-                        fontSize = 20.sp,
+
+                        fontSize =
+                            20.sp,
+
                         fontWeight =
                             FontWeight.Bold,
+
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -350,7 +430,10 @@ fun PlannerScreen(
                     Text(
                         text =
                             "${filteredItems.size} items",
-                        fontSize = 12.sp,
+
+                        fontSize =
+                            12.sp,
+
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -361,13 +444,20 @@ fun PlannerScreen(
                 Surface(
                     modifier =
                         Modifier.clickable {
+
                             prioritySortingEnabled =
                                 !prioritySortingEnabled
                         },
+
                     shape =
-                        RoundedCornerShape(14.dp),
+                        RoundedCornerShape(
+                            14.dp
+                        ),
+
                     color =
-                        if (prioritySortingEnabled) {
+                        if (
+                            prioritySortingEnabled
+                        ) {
                             MaterialTheme
                                 .colorScheme
                                 .primaryContainer
@@ -384,54 +474,59 @@ fun PlannerScreen(
                                 horizontal = 12.dp,
                                 vertical = 9.dp
                             ),
+
                         verticalAlignment =
                             Alignment.CenterVertically
                     ) {
 
                         Icon(
                             imageVector =
-                                Icons.AutoMirrored.Filled.Sort,
+                                Icons
+                                    .AutoMirrored
+                                    .Filled
+                                    .Sort,
+
                             contentDescription =
                                 "Sort by due date",
+
                             modifier =
-                                Modifier.size(19.dp),
+                                Modifier.size(
+                                    19.dp
+                                ),
+
                             tint =
-                                if (prioritySortingEnabled) {
-                                    MaterialTheme
-                                        .colorScheme
-                                        .onPrimaryContainer
-                                } else {
-                                    MaterialTheme
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                }
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
                         )
 
                         Spacer(
                             modifier =
-                                Modifier.width(6.dp)
+                                Modifier.width(
+                                    6.dp
+                                )
                         )
 
                         Text(
                             text =
-                                if (prioritySortingEnabled) {
+                                if (
+                                    prioritySortingEnabled
+                                ) {
                                     "Priority"
                                 } else {
                                     "Sort"
                                 },
-                            fontSize = 13.sp,
+
+                            fontSize =
+                                13.sp,
+
                             fontWeight =
                                 FontWeight.SemiBold,
+
                             color =
-                                if (prioritySortingEnabled) {
-                                    MaterialTheme
-                                        .colorScheme
-                                        .onPrimaryContainer
-                                } else {
-                                    MaterialTheme
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                }
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
                         )
                     }
                 }
@@ -439,7 +534,9 @@ fun PlannerScreen(
 
             Spacer(
                 modifier =
-                    Modifier.height(12.dp)
+                    Modifier.height(
+                        12.dp
+                    )
             )
 
             if (visibleItems.isEmpty()) {
@@ -451,6 +548,7 @@ fun PlannerScreen(
                             .padding(
                                 bottom = 80.dp
                             ),
+
                     contentAlignment =
                         Alignment.Center
                 ) {
@@ -465,6 +563,7 @@ fun PlannerScreen(
                                 RoundedCornerShape(
                                     22.dp
                                 ),
+
                             color =
                                 MaterialTheme
                                     .colorScheme
@@ -473,17 +572,27 @@ fun PlannerScreen(
 
                             Icon(
                                 imageVector =
-                                    if (type == "task") {
+                                    if (
+                                        type == "task"
+                                    ) {
                                         Icons.Default.Edit
                                     } else {
-                                        Icons.Default.CalendarToday
+                                        Icons.Default
+                                            .CalendarToday
                                     },
+
                                 contentDescription =
                                     null,
+
                                 modifier =
                                     Modifier
-                                        .padding(20.dp)
-                                        .size(42.dp),
+                                        .padding(
+                                            20.dp
+                                        )
+                                        .size(
+                                            42.dp
+                                        ),
+
                                 tint =
                                     MaterialTheme
                                         .colorScheme
@@ -493,38 +602,31 @@ fun PlannerScreen(
 
                         Spacer(
                             modifier =
-                                Modifier.height(14.dp)
+                                Modifier.height(
+                                    14.dp
+                                )
                         )
 
                         Text(
                             text =
-                                if (type == "task") {
+                                if (
+                                    type == "task"
+                                ) {
                                     "No tasks yet"
                                 } else {
                                     "No projects yet"
                                 },
-                            fontSize = 18.sp,
+
+                            fontSize =
+                                18.sp,
+
                             fontWeight =
                                 FontWeight.Bold,
+
                             color =
                                 MaterialTheme
                                     .colorScheme
                                     .onBackground
-                        )
-
-                        Spacer(
-                            modifier =
-                                Modifier.height(5.dp)
-                        )
-
-                        Text(
-                            text =
-                                "Create one using the + button",
-                            fontSize = 13.sp,
-                            color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant
                         )
                     }
                 }
@@ -534,8 +636,12 @@ fun PlannerScreen(
                 LazyColumn(
                     modifier =
                         Modifier.fillMaxSize(),
+
                     verticalArrangement =
-                        Arrangement.spacedBy(14.dp),
+                        Arrangement.spacedBy(
+                            14.dp
+                        ),
+
                     contentPadding =
                         PaddingValues(
                             start = 16.dp,
@@ -553,11 +659,14 @@ fun PlannerScreen(
 
                         PlannerCard(
                             item = item,
+
                             onEdit = {
                                 openEditor(item)
                             },
+
                             onDelete = {
-                                deletingItem = item
+                                deletingItem =
+                                    item
                             }
                         )
                     }
@@ -569,17 +678,25 @@ fun PlannerScreen(
             onClick = {
                 openEditor(null)
             },
+
             modifier =
                 Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(
+                        Alignment.BottomEnd
+                    )
                     .padding(18.dp)
                     .size(64.dp),
+
             shape =
-                RoundedCornerShape(20.dp),
+                RoundedCornerShape(
+                    20.dp
+                ),
+
             containerColor =
                 MaterialTheme
                     .colorScheme
                     .primaryContainer,
+
             contentColor =
                 MaterialTheme
                     .colorScheme
@@ -589,10 +706,14 @@ fun PlannerScreen(
             Icon(
                 imageVector =
                     Icons.Default.Add,
+
                 contentDescription =
                     "Add",
+
                 modifier =
-                    Modifier.size(30.dp)
+                    Modifier.size(
+                        30.dp
+                    )
             )
         }
     }
@@ -603,19 +724,28 @@ fun PlannerScreen(
             onDismissRequest = {
                 showEditor = false
             },
+
             shape =
-                RoundedCornerShape(28.dp),
+                RoundedCornerShape(
+                    28.dp
+                ),
+
             containerColor =
                 MaterialTheme
                     .colorScheme
                     .surface,
+
             title = {
 
                 Text(
                     text =
-                        if (editingItem == null) {
+                        if (
+                            editingItem == null
+                        ) {
                             "New ${
-                                if (selectedTab == 0) {
+                                if (
+                                    selectedTab == 0
+                                ) {
                                     "Task"
                                 } else {
                                     "Project"
@@ -623,81 +753,111 @@ fun PlannerScreen(
                             }"
                         } else {
                             "Edit ${
-                                if (selectedTab == 0) {
+                                if (
+                                    selectedTab == 0
+                                ) {
                                     "Task"
                                 } else {
                                     "Project"
                                 }
                             }"
                         },
-                    fontSize = 22.sp,
+
+                    fontSize =
+                        22.sp,
+
                     fontWeight =
-                        FontWeight.Bold,
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .onSurface
+                        FontWeight.Bold
                 )
             },
+
             text = {
 
                 Column(
                     verticalArrangement =
-                        Arrangement.spacedBy(11.dp)
+                        Arrangement.spacedBy(
+                            11.dp
+                        )
                 ) {
 
                     OutlinedTextField(
-                        value = title,
+                        value =
+                            title,
+
                         onValueChange = {
                             title = it
                         },
+
                         label = {
                             Text("Title")
                         },
+
                         singleLine = true,
+
                         modifier =
                             Modifier.fillMaxWidth(),
+
                         shape =
-                            RoundedCornerShape(15.dp)
+                            RoundedCornerShape(
+                                15.dp
+                            )
                     )
 
                     OutlinedTextField(
-                        value = description,
+                        value =
+                            description,
+
                         onValueChange = {
                             description = it
                         },
+
                         label = {
                             Text("Description")
                         },
+
                         minLines = 3,
+
                         modifier =
                             Modifier.fillMaxWidth(),
+
                         shape =
-                            RoundedCornerShape(15.dp)
+                            RoundedCornerShape(
+                                15.dp
+                            )
                     )
 
                     OutlinedTextField(
-                        value = dueDate,
+                        value =
+                            dueDate,
+
                         onValueChange = {
                             dueDate = it
                         },
+
                         label = {
                             Text("Due date")
                         },
+
                         modifier =
                             Modifier.fillMaxWidth(),
+
                         shape =
-                            RoundedCornerShape(15.dp),
+                            RoundedCornerShape(
+                                15.dp
+                            ),
+
                         trailingIcon = {
 
                             IconButton(
                                 onClick = {
-                                    showDatePicker = true
+                                    showDatePicker =
+                                        true
                                 }
                             ) {
 
                                 Icon(
-                                    Icons.Default.CalendarToday,
+                                    Icons.Default
+                                        .CalendarToday,
                                     contentDescription =
                                         "Select date"
                                 )
@@ -706,36 +866,49 @@ fun PlannerScreen(
                     )
 
                     OutlinedTextField(
-                        value = dueTime,
+                        value =
+                            dueTime,
+
                         onValueChange = {
                             dueTime = it
                         },
+
                         label = {
                             Text("Time")
                         },
+
                         placeholder = {
                             Text("23:59")
                         },
+
                         singleLine = true,
+
                         modifier =
                             Modifier.fillMaxWidth(),
+
                         shape =
-                            RoundedCornerShape(15.dp),
+                            RoundedCornerShape(
+                                15.dp
+                            ),
+
                         isError =
                             dueTime.isNotBlank() &&
                                     !isValidTime(
                                         dueTime
                                     ),
+
                         trailingIcon = {
 
                             IconButton(
                                 onClick = {
-                                    showTimePicker = true
+                                    showTimePicker =
+                                        true
                                 }
                             ) {
 
                                 Icon(
-                                    Icons.Default.Schedule,
+                                    Icons.Default
+                                        .Schedule,
                                     contentDescription =
                                         "Select time"
                                 )
@@ -746,31 +919,35 @@ fun PlannerScreen(
                     Box {
 
                         OutlinedTextField(
-                            value = status,
+                            value =
+                                status,
+
                             onValueChange = {},
+
                             readOnly = true,
+
                             label = {
                                 Text("Status")
                             },
+
                             modifier =
                                 Modifier.fillMaxWidth(),
+
                             shape =
-                                RoundedCornerShape(15.dp),
+                                RoundedCornerShape(
+                                    15.dp
+                                ),
+
                             trailingIcon = {
 
                                 TextButton(
                                     onClick = {
-                                        showStatusMenu = true
+                                        showStatusMenu =
+                                            true
                                     }
                                 ) {
 
-                                    Text(
-                                        "Change",
-                                        color =
-                                            MaterialTheme
-                                                .colorScheme
-                                                .primary
-                                    )
+                                    Text("Change")
                                 }
                             }
                         )
@@ -778,8 +955,10 @@ fun PlannerScreen(
                         DropdownMenu(
                             expanded =
                                 showStatusMenu,
+
                             onDismissRequest = {
-                                showStatusMenu = false
+                                showStatusMenu =
+                                    false
                             }
                         ) {
 
@@ -793,9 +972,11 @@ fun PlannerScreen(
                                     text = {
                                         Text(option)
                                     },
+
                                     onClick = {
 
-                                        status = option
+                                        status =
+                                            option
 
                                         showStatusMenu =
                                             false
@@ -806,23 +987,24 @@ fun PlannerScreen(
                     }
                 }
             },
+
             confirmButton = {
 
                 Button(
                     onClick = {
                         savePlannerItem()
                     },
+
                     shape =
-                        RoundedCornerShape(13.dp)
+                        RoundedCornerShape(
+                            13.dp
+                        )
                 ) {
 
-                    Text(
-                        "Save",
-                        fontWeight =
-                            FontWeight.Bold
-                    )
+                    Text("Save")
                 }
             },
+
             dismissButton = {
 
                 TextButton(
@@ -867,7 +1049,9 @@ fun PlannerScreen(
                         )
                     )
                     .apply {
+
                         clear()
+
                         set(
                             year,
                             month,
@@ -883,8 +1067,10 @@ fun PlannerScreen(
                     object :
                         SelectableDates {
 
-                        override fun isSelectableDate(
-                            utcTimeMillis: Long
+                        override fun
+                                isSelectableDate(
+                            utcTimeMillis:
+                            Long
                         ): Boolean {
 
                             return utcTimeMillis >=
@@ -897,6 +1083,7 @@ fun PlannerScreen(
             onDismissRequest = {
                 showDatePicker = false
             },
+
             confirmButton = {
 
                 TextButton(
@@ -911,6 +1098,7 @@ fun PlannerScreen(
                                         "dd MMMM yyyy",
                                         Locale.ENGLISH
                                     ).apply {
+
                                         timeZone =
                                             TimeZone.getTimeZone(
                                                 "UTC"
@@ -930,6 +1118,7 @@ fun PlannerScreen(
                     Text("OK")
                 }
             },
+
             dismissButton = {
 
                 TextButton(
@@ -944,7 +1133,8 @@ fun PlannerScreen(
         ) {
 
             DatePicker(
-                state = pickerState
+                state =
+                    pickerState
             )
         }
     }
@@ -961,38 +1151,37 @@ fun PlannerScreen(
                         .getOrNull(0)
                         ?.toIntOrNull()
                         ?: 23,
+
                 initialMinute =
                     parts
                         .getOrNull(1)
                         ?.toIntOrNull()
                         ?: 59,
-                is24Hour = true
+
+                is24Hour =
+                    true
             )
 
         AlertDialog(
             onDismissRequest = {
                 showTimePicker = false
             },
-            shape =
-                RoundedCornerShape(26.dp),
-            containerColor =
-                MaterialTheme
-                    .colorScheme
-                    .surface,
-            title = {
 
+            title = {
                 Text(
                     "Select Time",
                     fontWeight =
                         FontWeight.Bold
                 )
             },
-            text = {
 
+            text = {
                 TimePicker(
-                    state = pickerState
+                    state =
+                        pickerState
                 )
             },
+
             confirmButton = {
 
                 TextButton(
@@ -1006,18 +1195,21 @@ fun PlannerScreen(
                                 pickerState.minute
                             )
 
-                        showTimePicker = false
+                        showTimePicker =
+                            false
                     }
                 ) {
 
                     Text("OK")
                 }
             },
+
             dismissButton = {
 
                 TextButton(
                     onClick = {
-                        showTimePicker = false
+                        showTimePicker =
+                            false
                     }
                 ) {
 
@@ -1033,33 +1225,27 @@ fun PlannerScreen(
             onDismissRequest = {
                 deletingItem = null
             },
-            shape =
-                RoundedCornerShape(26.dp),
-            containerColor =
-                MaterialTheme
-                    .colorScheme
-                    .surface,
-            title = {
 
+            title = {
                 Text(
-                    text =
-                        "Delete ${
-                            if (item.itemType == "task") {
-                                "Task"
-                            } else {
-                                "Project"
-                            }
-                        }?",
-                    fontWeight =
-                        FontWeight.Bold
+                    "Delete ${
+                        if (
+                            item.itemType == "task"
+                        ) {
+                            "Task"
+                        } else {
+                            "Project"
+                        }
+                    }?"
                 )
             },
-            text = {
 
+            text = {
                 Text(
                     "Are you sure you want to delete \"${item.title}\"?"
                 )
             },
+
             confirmButton = {
 
                 TextButton(
@@ -1078,12 +1264,11 @@ fun PlannerScreen(
                         color =
                             MaterialTheme
                                 .colorScheme
-                                .error,
-                        fontWeight =
-                            FontWeight.Bold
+                                .error
                     )
                 }
             },
+
             dismissButton = {
 
                 TextButton(
@@ -1111,8 +1296,12 @@ private fun PlannerTab(
             modifier.clickable {
                 onClick()
             },
+
         shape =
-            RoundedCornerShape(14.dp),
+            RoundedCornerShape(
+                14.dp
+            ),
+
         color =
             if (selected) {
                 MaterialTheme
@@ -1130,19 +1319,25 @@ private fun PlannerTab(
                     .padding(
                         vertical = 10.dp
                     ),
+
             contentAlignment =
                 Alignment.Center
         ) {
 
             Text(
-                text = text,
-                fontSize = 15.sp,
+                text =
+                    text,
+
+                fontSize =
+                    15.sp,
+
                 fontWeight =
                     if (selected) {
                         FontWeight.Bold
                     } else {
                         FontWeight.Medium
                     },
+
                 color =
                     if (selected) {
                         MaterialTheme
@@ -1164,46 +1359,38 @@ private fun PlannerCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var showMenu by remember {
+    var showMenu by
+    remember {
         mutableStateOf(false)
     }
 
     val missed =
-        isMissed(item)
-
-    val displayStatus =
-        if (missed) {
-            "Missed"
-        } else {
-            item.status
-        }
+        item.status.equals(
+            "Missed",
+            ignoreCase = true
+        )
 
     Card(
         modifier =
             Modifier.fillMaxWidth(),
+
         shape =
-            RoundedCornerShape(22.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme
-                        .colorScheme
-                        .surface
-            ),
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 2.dp
+            RoundedCornerShape(
+                22.dp
             )
     ) {
 
         Column(
             modifier =
-                Modifier.padding(18.dp)
+                Modifier.padding(
+                    18.dp
+                )
         ) {
 
             Row(
                 modifier =
                     Modifier.fillMaxWidth(),
+
                 verticalAlignment =
                     Alignment.Top
             ) {
@@ -1214,14 +1401,14 @@ private fun PlannerCard(
                 ) {
 
                     Text(
-                        text = item.title,
-                        fontSize = 19.sp,
+                        text =
+                            item.title,
+
+                        fontSize =
+                            19.sp,
+
                         fontWeight =
-                            FontWeight.Bold,
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurface
+                            FontWeight.Bold
                     )
 
                     if (
@@ -1230,13 +1417,18 @@ private fun PlannerCard(
 
                         Spacer(
                             modifier =
-                                Modifier.height(5.dp)
+                                Modifier.height(
+                                    5.dp
+                                )
                         )
 
                         Text(
                             text =
                                 item.description,
-                            fontSize = 14.sp,
+
+                            fontSize =
+                                14.sp,
+
                             color =
                                 MaterialTheme
                                     .colorScheme
@@ -1256,17 +1448,14 @@ private fun PlannerCard(
                         Icon(
                             Icons.Default.MoreVert,
                             contentDescription =
-                                "Actions",
-                            tint =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant
+                                "Actions"
                         )
                     }
 
                     DropdownMenu(
                         expanded =
                             showMenu,
+
                         onDismissRequest = {
                             showMenu = false
                         }
@@ -1276,19 +1465,21 @@ private fun PlannerCard(
 
                             DropdownMenuItem(
                                 leadingIcon = {
-
                                     Icon(
                                         Icons.Default.Edit,
                                         contentDescription =
                                             null
                                     )
                                 },
+
                                 text = {
                                     Text("Edit")
                                 },
+
                                 onClick = {
 
                                     showMenu = false
+
                                     onEdit()
                                 }
                             )
@@ -1296,30 +1487,21 @@ private fun PlannerCard(
 
                         DropdownMenuItem(
                             leadingIcon = {
-
                                 Icon(
                                     Icons.Default.Delete,
                                     contentDescription =
-                                        null,
-                                    tint =
-                                        MaterialTheme
-                                            .colorScheme
-                                            .error
+                                        null
                                 )
                             },
-                            text = {
 
-                                Text(
-                                    "Delete",
-                                    color =
-                                        MaterialTheme
-                                            .colorScheme
-                                            .error
-                                )
+                            text = {
+                                Text("Delete")
                             },
+
                             onClick = {
 
                                 showMenu = false
+
                                 onDelete()
                             }
                         )
@@ -1329,56 +1511,64 @@ private fun PlannerCard(
 
             Spacer(
                 modifier =
-                    Modifier.height(14.dp)
+                    Modifier.height(
+                        14.dp
+                    )
             )
 
-            HorizontalDivider(
-                color =
-                    MaterialTheme
-                        .colorScheme
-                        .outlineVariant
-            )
+            HorizontalDivider()
 
             Spacer(
                 modifier =
-                    Modifier.height(13.dp)
+                    Modifier.height(
+                        13.dp
+                    )
             )
 
             Row(
                 modifier =
                     Modifier.fillMaxWidth(),
+
                 horizontalArrangement =
-                    Arrangement.spacedBy(8.dp)
+                    Arrangement.spacedBy(
+                        8.dp
+                    )
             ) {
 
                 InfoChip(
                     icon =
                         Icons.Default.CalendarToday,
+
                     text =
-                        item.dueAt.substringBefore(
-                            ","
-                        )
+                        item.dueAt
+                            .substringBefore(
+                                ","
+                            )
                 )
 
                 InfoChip(
                     icon =
                         Icons.Default.Schedule,
+
                     text =
-                        item.dueAt.substringAfterLast(
-                            ", ",
-                            ""
-                        )
+                        item.dueAt
+                            .substringAfterLast(
+                                ", ",
+                                ""
+                            )
                 )
             }
 
             Spacer(
                 modifier =
-                    Modifier.height(10.dp)
+                    Modifier.height(
+                        10.dp
+                    )
             )
 
             StatusChip(
                 status =
-                    displayStatus
+                    item.status
             )
         }
     }
@@ -1391,7 +1581,10 @@ private fun InfoChip(
 ) {
     Surface(
         shape =
-            RoundedCornerShape(10.dp),
+            RoundedCornerShape(
+                10.dp
+            ),
+
         color =
             MaterialTheme
                 .colorScheme
@@ -1404,15 +1597,23 @@ private fun InfoChip(
                     horizontal = 9.dp,
                     vertical = 6.dp
                 ),
+
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
 
             Icon(
-                imageVector = icon,
-                contentDescription = null,
+                imageVector =
+                    icon,
+
+                contentDescription =
+                    null,
+
                 modifier =
-                    Modifier.size(15.dp),
+                    Modifier.size(
+                        15.dp
+                    ),
+
                 tint =
                     MaterialTheme
                         .colorScheme
@@ -1421,18 +1622,17 @@ private fun InfoChip(
 
             Spacer(
                 modifier =
-                    Modifier.width(5.dp)
+                    Modifier.width(
+                        5.dp
+                    )
             )
 
             Text(
-                text = text,
-                fontSize = 11.sp,
-                fontWeight =
-                    FontWeight.Medium,
-                color =
-                    MaterialTheme
-                        .colorScheme
-                        .onSurfaceVariant
+                text =
+                    text,
+
+                fontSize =
+                    11.sp
             )
         }
     }
@@ -1443,23 +1643,26 @@ private fun StatusChip(
     status: String
 ) {
     val containerColor =
-        when (status) {
-            "Completed" ->
+        when (
+            status.lowercase()
+        ) {
+
+            "completed" ->
                 MaterialTheme
                     .colorScheme
                     .tertiaryContainer
 
-            "In progress" ->
+            "in progress" ->
                 MaterialTheme
                     .colorScheme
                     .primary
 
-            "Not started" ->
+            "not started" ->
                 MaterialTheme
                     .colorScheme
                     .surfaceVariant
 
-            "Missed" ->
+            "missed" ->
                 MaterialTheme
                     .colorScheme
                     .errorContainer
@@ -1471,23 +1674,26 @@ private fun StatusChip(
         }
 
     val contentColor =
-        when (status) {
-            "Completed" ->
+        when (
+            status.lowercase()
+        ) {
+
+            "completed" ->
                 MaterialTheme
                     .colorScheme
                     .onTertiaryContainer
 
-            "In progress" ->
+            "in progress" ->
                 MaterialTheme
                     .colorScheme
                     .onPrimary
 
-            "Not started" ->
+            "not started" ->
                 MaterialTheme
                     .colorScheme
                     .onSurfaceVariant
 
-            "Missed" ->
+            "missed" ->
                 MaterialTheme
                     .colorScheme
                     .onErrorContainer
@@ -1500,7 +1706,10 @@ private fun StatusChip(
 
     Surface(
         shape =
-            RoundedCornerShape(10.dp),
+            RoundedCornerShape(
+                10.dp
+            ),
+
         color =
             containerColor
     ) {
@@ -1511,6 +1720,7 @@ private fun StatusChip(
                     horizontal = 11.dp,
                     vertical = 6.dp
                 ),
+
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
@@ -1519,7 +1729,9 @@ private fun StatusChip(
                 modifier =
                     Modifier
                         .size(7.dp)
-                        .clip(CircleShape)
+                        .clip(
+                            CircleShape
+                        )
                         .background(
                             contentColor
                         )
@@ -1527,14 +1739,21 @@ private fun StatusChip(
 
             Spacer(
                 modifier =
-                    Modifier.width(6.dp)
+                    Modifier.width(
+                        6.dp
+                    )
             )
 
             Text(
-                text = status,
-                fontSize = 11.sp,
+                text =
+                    status,
+
+                fontSize =
+                    11.sp,
+
                 fontWeight =
                     FontWeight.Bold,
+
                 color =
                     contentColor
             )
@@ -1542,34 +1761,27 @@ private fun StatusChip(
     }
 }
 
-private fun isMissed(
-    item: PlannerItem
-): Boolean {
-    if (
-        item.status.equals(
-            "Completed",
-            ignoreCase = true
-        )
-    ) {
-        return false
-    }
-
-    return dueDateTime(item.dueAt) <
-            System.currentTimeMillis()
-}
-
 private fun dueDateTime(
     value: String
 ): Long {
+
     return try {
-        SimpleDateFormat(
-            "dd MMMM yyyy, HH:mm",
-            Locale.ENGLISH
-        )
+
+        val formatter =
+            SimpleDateFormat(
+                "dd MMMM yyyy, HH:mm",
+                Locale.ENGLISH
+            )
+
+        formatter
             .parse(value)
             ?.time
             ?: Long.MAX_VALUE
-    } catch (_: Exception) {
+
+    } catch (
+        e: Exception
+    ) {
+
         Long.MAX_VALUE
     }
 }
@@ -1577,6 +1789,7 @@ private fun dueDateTime(
 private fun isValidTime(
     value: String
 ): Boolean {
+
     return Regex(
         "^([01]\\d|2[0-3]):[0-5]\\d$"
     ).matches(value)
