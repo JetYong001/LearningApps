@@ -96,7 +96,7 @@ class FlashcardsViewModel : ViewModel() {
                         }
 
                 val prompt = """
-                    Create 5 flashcards from these notes.
+                    Create 2 to 10 flashcards from these notes based on the content of notes.
                     Use the same language as the notes.
                     Format: Question | Answer
                     No numbering or extra text.
